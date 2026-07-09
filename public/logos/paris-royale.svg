@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 300" role="img" aria-label="Paris Royale">
+  <defs>
+    <linearGradient id="prPurple" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b25aa0"/>
+      <stop offset="1" stop-color="#9c4a8c"/>
+    </linearGradient>
+  </defs>
+  <!-- PARIS block on purple background -->
+  <rect x="8" y="14" width="300" height="104" fill="url(#prPurple)"/>
+  <text x="24" y="98" font-family="Arial, Helvetica, sans-serif" font-size="92" font-weight="800" fill="#ffffff">PARIS</text>
+  <!-- ROYALE outlined -->
+  <rect x="80" y="150" width="352" height="118" fill="none" stroke="#9c4a8c" stroke-width="2"/>
+  <text x="96" y="248" font-family="Arial, Helvetica, sans-serif" font-size="104" font-weight="800" fill="#9c4a8c">ROYALE</text>
+  <text x="418" y="140" font-family="Arial, sans-serif" font-size="20" fill="#9c4a8c">&#8482;</text>
+  <!-- Eiffel Tower silhouette -->
+  <g fill="#9c4a8c">
+    <path d="M250 20l4 40h-8z"/>
+    <path d="M240 62h28l6 60h-40z" opacity="0.9"/>
+    <path d="M232 122h44l10 146h-64z"/>
+    <path d="M226 200h56v10h-56z"/>
+    <path d="M258 200l-30 68h12l22-52 22 52h12l-30-68z"/>
+  </g>
+</svg>
