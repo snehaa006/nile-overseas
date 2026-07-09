@@ -10,6 +10,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { LoadingState, Spinner } from "@/shared/components/StateViews";
+import { BrandLogoManager } from "@/admin/components/BrandLogoManager";
 
 const schema = z.object({
   company_name: z.string().min(1, "Company name is required"),
@@ -96,6 +97,18 @@ export function WebsiteSettingsPage() {
           </Button>
         </div>
       </form>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Brand logos</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Upload or replace the logo shown for each brand across the website.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <BrandLogoManager />
+        </CardContent>
+      </Card>
     </div>
   );
 }

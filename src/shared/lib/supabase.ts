@@ -19,6 +19,7 @@ export const supabase = createClient<Database>(url, anonKey, {
 });
 
 export const STORAGE_BUCKET = "blanket-images";
+export const LOGO_BUCKET = "brand-logos";
 
 /** Resolve a storage object path to its public URL. */
 export function publicImageUrl(path: string): string {

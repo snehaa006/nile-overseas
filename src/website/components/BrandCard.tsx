@@ -6,12 +6,14 @@ export function BrandCard({
   name,
   count,
   tagline,
+  logoUrl,
 }: {
   name: string;
   count: number;
   tagline: string;
+  logoUrl?: string | null;
 }) {
-  const logo = brandLogo(name);
+  const logo = brandLogo(name, logoUrl);
   return (
     <Link
       to={`/products#${name.toLowerCase()}`}

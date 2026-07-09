@@ -90,6 +90,7 @@ export function HomePage() {
                 name={b.name}
                 count={b.blankets.length}
                 tagline={TAGLINES[b.name] ?? b.description ?? "Explore the range."}
+                logoUrl={b.logo_url}
               />
             </Reveal>
           ))}

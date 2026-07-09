@@ -44,9 +44,9 @@ export function ProductsPage() {
             className="mb-16 scroll-mt-20"
           >
             <div className="mb-6 flex items-center gap-4">
-              {brandLogo(brand.name) && (
+              {brandLogo(brand.name, brand.logo_url) && (
                 <img
-                  src={brandLogo(brand.name)}
+                  src={brandLogo(brand.name, brand.logo_url)}
                   alt={`${brand.name} logo`}
                   className="h-14 w-auto object-contain"
                   loading="lazy"
