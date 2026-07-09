@@ -3,6 +3,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { ErrorState, EmptyState } from "@/shared/components/StateViews";
 import { Reveal } from "@/shared/components/Reveal";
 import { BlanketCard } from "../components/BlanketCard";
+import { brandLogo } from "../lib/brandLogos";
 
 export function ProductsPage() {
   const { data: brands, isLoading, isError, error, refetch } = useCatalogue();
@@ -43,6 +44,14 @@ export function ProductsPage() {
             className="mb-16 scroll-mt-20"
           >
             <div className="mb-6 flex items-center gap-4">
+              {brandLogo(brand.name) && (
+                <img
+                  src={brandLogo(brand.name)}
+                  alt={`${brand.name} logo`}
+                  className="h-14 w-auto object-contain"
+                  loading="lazy"
+                />
+              )}
               <h2 className="font-serif text-3xl font-bold text-primary">
                 {brand.name}
               </h2>

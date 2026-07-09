@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="CloudNine Blankets">
+  <defs>
+    <linearGradient id="cnGold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4dfa0"/>
+      <stop offset="0.45" stop-color="#d9ab55"/>
+      <stop offset="0.75" stop-color="#c9973f"/>
+      <stop offset="1" stop-color="#e8c877"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#cnGold)">
+    <!-- C of the monogram -->
+    <path d="M232 96c-46-30-118-18-140 34-20 47 6 104 60 112" stroke-width="16" stroke-linecap="round"/>
+    <!-- N of the monogram -->
+    <path d="M150 210V118l96 96V122" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <!-- sparkle -->
+  <path d="M262 96l6 20 20 6-20 6-6 20-6-20-20-6 20-6z" fill="url(#cnGold)"/>
+  <!-- flowing wave -->
+  <path d="M78 250c46-26 92-8 138-8s92-18 108-34c-6 40-58 66-118 66-46 0-92-8-128-24z" fill="url(#cnGold)" opacity="0.95"/>
+  <!-- wordmark -->
+  <text x="200" y="322" text-anchor="middle" font-family="Cormorant Garamond, Georgia, serif" font-size="66" font-weight="700" fill="url(#cnGold)">CloudNine</text>
+  <text x="200" y="356" text-anchor="middle" font-family="Inter, sans-serif" font-size="20" letter-spacing="10" fill="url(#cnGold)">BLANKETS</text>
+  <text x="200" y="382" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" letter-spacing="2.5" fill="#c9973f">WRAPPED IN WARMTH. CRAFTED IN LUXURY.</text>
+</svg>
