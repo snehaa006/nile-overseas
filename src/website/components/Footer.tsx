@@ -53,8 +53,11 @@ export function Footer() {
         </div>
       </div>
       <div className="border-t border-primary-foreground/10">
-        <div className="container py-4 text-center text-xs text-primary-foreground/60">
-          © {year} {s?.company_name ?? "Nile Overseas"}. All rights reserved.
+        <div className="container flex flex-col items-center justify-between gap-2 py-4 text-center text-xs text-primary-foreground/60 sm:flex-row">
+          <span>© {year} {s?.company_name ?? "Nile Overseas"}. All rights reserved.</span>
+          <Link to="/admin/login" className="text-primary-foreground/40 hover:text-primary-foreground/70">
+            Staff Login
+          </Link>
         </div>
       </div>
     </footer>
