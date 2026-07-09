@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { BlanketCard } from "../components/BlanketCard";
 import { BrandCard } from "../components/BrandCard";
+import { Reveal } from "@/shared/components/Reveal";
 import type { BlanketWithImages } from "@/shared/types/models";
 
 const TAGLINES: Record<string, string> = {
@@ -26,8 +27,9 @@ export function HomePage() {
     <>
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-b from-secondary/60 to-background">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-accent/10 blur-3xl animate-float" />
         <div className="container grid gap-10 py-20 md:grid-cols-2 md:py-28">
-          <div className="flex flex-col justify-center animate-fade-in">
+          <div className="flex flex-col justify-center animate-fade-in-up">
             <p className="text-sm font-semibold uppercase tracking-widest text-accent">
               {settings?.company_name ?? "Nile Overseas"}
             </p>
@@ -39,21 +41,25 @@ export function HomePage() {
               and everyday blankets, made with care.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <Button asChild size="lg">
+              <Button asChild size="lg" className="transition-transform hover:scale-[1.03] active:scale-[0.98]">
                 <Link to="/products">
                   Explore Products <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline">
+              <Button asChild size="lg" variant="outline" className="transition-transform hover:scale-[1.03] active:scale-[0.98]">
                 <Link to="/contact">Contact Us</Link>
               </Button>
             </div>
           </div>
-          <div className="relative hidden md:block">
+          <div className="relative hidden md:block animate-scale-in" style={{ animationDelay: "150ms" }}>
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-accent/20 to-primary/10" />
             <div className="relative grid h-full grid-cols-2 gap-4 p-4">
-              {featured.slice(0, 2).map(({ blanket, brand }) => (
-                <div key={blanket.id} className="self-center">
+              {featured.slice(0, 2).map(({ blanket, brand }, i) => (
+                <div
+                  key={blanket.id}
+                  className="animate-fade-in-up self-center"
+                  style={{ animationDelay: `${250 + i * 120}ms` }}
+                >
                   <BlanketCard blanket={blanket} brandName={brand} />
                 </div>
               ))}
@@ -63,7 +69,7 @@ export function HomePage() {
       </section>
 
       {/* About strip */}
-      <section className="container py-16">
+      <Reveal as="section" className="container py-16">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="font-serif text-3xl font-bold text-primary">
             About {settings?.company_name ?? "Nile Overseas"}
@@ -73,25 +79,26 @@ export function HomePage() {
               "Nile Overseas is a blanket manufacturer committed to quality craftsmanship and lasting comfort across our DRJ and Cloud9 brands."}
           </p>
         </div>
-      </section>
+      </Reveal>
 
       {/* Brand cards */}
       <section className="container py-8">
         <div className="grid gap-6 md:grid-cols-2">
-          {(brands ?? []).map((b) => (
-            <BrandCard
-              key={b.id}
-              name={b.name}
-              count={b.blankets.length}
-              tagline={TAGLINES[b.name] ?? b.description ?? "Explore the range."}
-            />
+          {(brands ?? []).map((b, i) => (
+            <Reveal key={b.id} delay={i * 100}>
+              <BrandCard
+                name={b.name}
+                count={b.blankets.length}
+                tagline={TAGLINES[b.name] ?? b.description ?? "Explore the range."}
+              />
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* Featured products */}
       <section className="container py-16">
-        <div className="mb-8 flex items-end justify-between">
+        <Reveal className="mb-8 flex items-end justify-between">
           <div>
             <h2 className="font-serif text-3xl font-bold text-primary">
               Featured Blankets
@@ -102,11 +109,11 @@ export function HomePage() {
           </div>
           <Link
             to="/products"
-            className="hidden items-center gap-1 text-sm font-medium text-accent hover:underline sm:flex"
+            className="hidden items-center gap-1 text-sm font-medium text-accent transition-colors hover:underline sm:flex"
           >
             View all <ArrowRight className="h-4 w-4" />
           </Link>
-        </div>
+        </Reveal>
 
         {isLoading ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -116,8 +123,10 @@ export function HomePage() {
           </div>
         ) : featured.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {featured.map(({ blanket, brand }) => (
-              <BlanketCard key={blanket.id} blanket={blanket} brandName={brand} />
+            {featured.map(({ blanket, brand }, i) => (
+              <Reveal key={blanket.id} delay={i * 80}>
+                <BlanketCard blanket={blanket} brandName={brand} />
+              </Reveal>
             ))}
           </div>
         ) : (

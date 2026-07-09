@@ -13,12 +13,13 @@ export function BrandCard({
   return (
     <Link
       to={`/products#${name.toLowerCase()}`}
-      className="group relative overflow-hidden rounded-2xl border bg-gradient-to-br from-secondary to-background p-8 shadow-sm transition-all hover:shadow-md"
+      className="group relative overflow-hidden rounded-2xl border bg-gradient-to-br from-secondary to-background p-8 shadow-sm transition-all duration-300 ease-smooth hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5"
     >
+      <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-accent/0 transition-colors duration-500 group-hover:bg-accent/10" />
       <p className="text-xs font-semibold uppercase tracking-widest text-accent">
         Brand
       </p>
-      <h3 className="mt-2 font-serif text-3xl font-bold text-primary">{name}</h3>
+      <h3 className="mt-2 font-serif text-3xl font-bold text-primary transition-colors group-hover:text-accent">{name}</h3>
       <p className="mt-2 text-sm text-muted-foreground">{tagline}</p>
       <div className="mt-6 flex items-center gap-2 text-sm font-medium text-primary">
         {count} {count === 1 ? "blanket" : "blankets"}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Lock } from "lucide-react";
+import { Check, Lock, ArrowDownToLine } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
@@ -19,19 +19,31 @@ export function StockRowEditor({
   locked: boolean;
 }) {
   const upsert = useUpsertStock(month);
-  const [opening, setOpening] = useState(String(line.stock?.opening_stock ?? 0));
+
+  // Opening is fixed once a row exists (set by the DB trigger from the prior
+  // month's closing stock). Before the row exists, we show the carried-
+  // forward figure read-only too — it's exactly what will be saved.
+  const rowExists = Boolean(line.stock);
+  const openingValue = rowExists
+    ? Number(line.stock!.opening_stock)
+    : (line.priorClosing ?? 0);
+  const openingIsEditable = !rowExists && line.priorClosing === null;
+
+  const [openingInput, setOpeningInput] = useState(String(openingValue));
   const [production, setProduction] = useState(String(line.stock?.production ?? 0));
   const [sales, setSales] = useState(String(line.stock?.sales ?? 0));
 
   useEffect(() => {
-    setOpening(String(line.stock?.opening_stock ?? 0));
+    setOpeningInput(String(openingValue));
     setProduction(String(line.stock?.production ?? 0));
     setSales(String(line.stock?.sales ?? 0));
-  }, [line.stock]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [line.stock, line.priorClosing]);
 
-  const closing = Number(opening || 0) + Number(production || 0) - Number(sales || 0);
+  const opening = openingIsEditable ? Number(openingInput || 0) : openingValue;
+  const closing = opening + Number(production || 0) - Number(sales || 0);
   const dirty =
-    Number(opening || 0) !== Number(line.stock?.opening_stock ?? 0) ||
+    (openingIsEditable && Number(openingInput || 0) !== Number(line.stock?.opening_stock ?? 0)) ||
     Number(production || 0) !== Number(line.stock?.production ?? 0) ||
     Number(sales || 0) !== Number(line.stock?.sales ?? 0);
 
@@ -40,7 +52,7 @@ export function StockRowEditor({
       await upsert.mutateAsync({
         blanket_id: line.blanket_id,
         month,
-        opening_stock: Number(opening || 0),
+        opening_stock: opening,
         production: Number(production || 0),
         sales: Number(sales || 0),
       });
@@ -50,25 +62,49 @@ export function StockRowEditor({
     }
   };
 
-  const cell = (value: string, set: (v: string) => void) => (
-    <Input
-      type="number"
-      value={value}
-      disabled={locked}
-      onChange={(e) => set(e.target.value)}
-      className="h-9 w-24"
-    />
-  );
-
   return (
     <TableRow>
       <TableCell className="font-medium">
         {line.name}
         <span className="ml-2 font-mono text-xs text-muted-foreground">{line.sku}</span>
       </TableCell>
-      <TableCell>{cell(opening, setOpening)}</TableCell>
-      <TableCell>{cell(production, setProduction)}</TableCell>
-      <TableCell>{cell(sales, setSales)}</TableCell>
+      <TableCell>
+        {openingIsEditable ? (
+          <Input
+            type="number"
+            value={openingInput}
+            disabled={locked}
+            onChange={(e) => setOpeningInput(e.target.value)}
+            className="h-9 w-24"
+          />
+        ) : (
+          <span
+            title="Carried forward from the previous month's closing stock"
+            className="inline-flex h-9 w-24 items-center gap-1 rounded-md border border-dashed bg-muted/40 px-3 text-sm text-muted-foreground"
+          >
+            <ArrowDownToLine className="h-3 w-3 shrink-0" />
+            {formatNumber(openingValue)}
+          </span>
+        )}
+      </TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          value={production}
+          disabled={locked}
+          onChange={(e) => setProduction(e.target.value)}
+          className="h-9 w-24"
+        />
+      </TableCell>
+      <TableCell>
+        <Input
+          type="number"
+          value={sales}
+          disabled={locked}
+          onChange={(e) => setSales(e.target.value)}
+          className="h-9 w-24"
+        />
+      </TableCell>
       <TableCell className="font-semibold">{formatNumber(closing)}</TableCell>
       <TableCell className="text-right">
         {locked ? (

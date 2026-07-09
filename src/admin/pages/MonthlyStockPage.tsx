@@ -1,16 +1,20 @@
 import { useMemo, useState } from "react";
-import { Lock, Unlock } from "lucide-react";
+import { Lock, Unlock, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useMonthStock, useToggleMonthLock } from "@/shared/hooks/useStock";
 import { StockRowEditor } from "../components/StockRowEditor";
+import { AllMonthsView } from "../components/AllMonthsView";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent } from "@/shared/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/components/ui/tabs";
+import { MonthPicker } from "@/shared/components/ui/month-picker";
 import {
   Table, TableBody, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
 import { LoadingState, ErrorState, EmptyState } from "@/shared/components/StateViews";
 import { formatMonth, formatNumber, monthKey } from "@/shared/utils/format";
+import { downloadCsv, toCsv } from "@/shared/utils/csv";
 import type { MonthStockLine } from "@/shared/api/stock";
 
 export function MonthlyStockPage() {
@@ -39,7 +43,7 @@ export function MonthlyStockPage() {
       (acc, l) => {
         acc.production += Number(l.stock?.production ?? 0);
         acc.sales += Number(l.stock?.sales ?? 0);
-        acc.closing += Number(l.stock?.closing_stock ?? 0);
+        acc.closing += Number(l.stock?.closing_stock ?? (l.priorClosing ?? 0));
         return acc;
       },
       { production: 0, sales: 0, closing: 0 },
@@ -61,83 +65,114 @@ export function MonthlyStockPage() {
     }
   };
 
+  const handleExport = () => {
+    if (!lines || lines.length === 0) return;
+    const headers = ["Brand", "Blanket", "SKU", "Opening", "Production", "Sales", "Closing"];
+    const rows = lines.map((l) => [
+      l.brand_name,
+      l.name,
+      l.sku,
+      l.stock ? l.stock.opening_stock : (l.priorClosing ?? 0),
+      l.stock?.production ?? 0,
+      l.stock?.sales ?? 0,
+      l.stock?.closing_stock ?? (l.priorClosing ?? 0),
+    ]);
+    downloadCsv(`nile-overseas-stock-${monthInput}.csv`, toCsv(headers, rows));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-serif text-3xl font-bold text-primary">Monthly Stock</h1>
           <p className="text-muted-foreground">
-            Opening + Production − Sales = Closing (auto-calculated).
+            Opening + Production − Sales = Closing. Opening carries forward automatically.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <input
-            type="month"
-            value={monthInput}
-            onChange={(e) => setMonthInput(e.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-          />
-          {locked ? (
-            <Badge variant="muted"><Lock className="mr-1 h-3 w-3" /> Locked</Badge>
+      </div>
+
+      <Tabs defaultValue="month">
+        <TabsList>
+          <TabsTrigger value="month">Single Month</TabsTrigger>
+          <TabsTrigger value="all">All Months</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="month" className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <MonthPicker value={monthInput} onChange={setMonthInput} />
+              {locked ? (
+                <Badge variant="muted"><Lock className="mr-1 h-3 w-3" /> Locked</Badge>
+              ) : (
+                <Badge variant="success">Open</Badge>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={!lines?.length}>
+                <Download className="h-4 w-4" /> Export CSV
+              </Button>
+              <Button variant="outline" onClick={handleLock} disabled={toggleLock.isPending}>
+                {locked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                {locked ? "Unlock" : "Lock month"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Summary label={`${formatMonth(month)} production`} value={totals.production} />
+            <Summary label="Sales" value={totals.sales} />
+            <Summary label="Closing stock" value={totals.closing} />
+          </div>
+
+          {isLoading ? (
+            <LoadingState />
+          ) : isError ? (
+            <ErrorState error={error} onRetry={refetch} />
+          ) : byBrand.length === 0 ? (
+            <EmptyState
+              title="No active blankets"
+              description="Add and activate blankets to track their monthly stock."
+            />
           ) : (
-            <Badge variant="success">Open</Badge>
+            byBrand.map(([brand, brandLines]) => (
+              <Card key={brand}>
+                <CardContent className="p-0">
+                  <div className="flex items-center justify-between border-b px-4 py-3">
+                    <h2 className="font-serif text-lg font-semibold text-primary">{brand}</h2>
+                    <span className="text-sm text-muted-foreground">{brandLines.length} blankets</span>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Blanket</TableHead>
+                        <TableHead>Opening</TableHead>
+                        <TableHead>Production</TableHead>
+                        <TableHead>Sales</TableHead>
+                        <TableHead>Closing</TableHead>
+                        <TableHead className="text-right">Save</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {brandLines.map((line) => (
+                        <StockRowEditor
+                          key={line.blanket_id}
+                          line={line}
+                          month={month}
+                          locked={locked}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            ))
           )}
-          <Button variant="outline" onClick={handleLock} disabled={toggleLock.isPending}>
-            {locked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-            {locked ? "Unlock" : "Lock month"}
-          </Button>
-        </div>
-      </div>
+        </TabsContent>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Summary label={`${formatMonth(month)} production`} value={totals.production} />
-        <Summary label="Sales" value={totals.sales} />
-        <Summary label="Closing stock" value={totals.closing} />
-      </div>
-
-      {isLoading ? (
-        <LoadingState />
-      ) : isError ? (
-        <ErrorState error={error} onRetry={refetch} />
-      ) : byBrand.length === 0 ? (
-        <EmptyState
-          title="No active blankets"
-          description="Add and activate blankets to track their monthly stock."
-        />
-      ) : (
-        byBrand.map(([brand, brandLines]) => (
-          <Card key={brand}>
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between border-b px-4 py-3">
-                <h2 className="font-serif text-lg font-semibold text-primary">{brand}</h2>
-                <span className="text-sm text-muted-foreground">{brandLines.length} blankets</span>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Blanket</TableHead>
-                    <TableHead>Opening</TableHead>
-                    <TableHead>Production</TableHead>
-                    <TableHead>Sales</TableHead>
-                    <TableHead>Closing</TableHead>
-                    <TableHead className="text-right">Save</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {brandLines.map((line) => (
-                    <StockRowEditor
-                      key={line.blanket_id}
-                      line={line}
-                      month={month}
-                      locked={locked}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        ))
-      )}
+        <TabsContent value="all">
+          <AllMonthsView />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

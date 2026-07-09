@@ -20,6 +20,7 @@ export const qk = {
   images: (blanketId: string) => ["images", blanketId] as const,
   stock: (month: string) => ["stock", month] as const,
   stockMonths: ["stock-months"] as const,
+  allStock: ["all-stock"] as const,
   settings: ["settings"] as const,
   dashboard: ["dashboard"] as const,
   reportSummary: ["report-summary"] as const,

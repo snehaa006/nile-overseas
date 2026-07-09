@@ -32,7 +32,51 @@ export function Navbar() {
               end={l.to === "/"}
               className={({ isActive }) =>
                 cn(
-                  "text-sm font-medium transition-colors hover:text-accent",
+                  "group relative text-sm font-medium transition-colors hover:text-accent",
+                  isActive ? "text-accent" : "text-foreground/70",
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {l.label}
+                  <span
+                    className={cn(
+                      "absolute -bottom-1 left-0 h-px bg-accent transition-all duration-300 ease-smooth",
+                      isActive ? "w-full" : "w-0 group-hover:w-full",
+                    )}
+                  />
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
+
+        <button
+          className="transition-transform active:scale-90 md:hidden"
+          onClick={() => setOpen((v) => !v)}
+          aria-label="Toggle menu"
+        >
+          {open ? <X /> : <Menu />}
+        </button>
+      </nav>
+
+      <div
+        className={cn(
+          "overflow-hidden border-t border-border/60 transition-all duration-300 ease-smooth md:hidden",
+          open ? "max-h-64 border-opacity-100" : "max-h-0 border-opacity-0",
+        )}
+      >
+        <div className="container flex flex-col py-2">
+          {links.map((l) => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              end={l.to === "/"}
+              onClick={() => setOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  "py-3 text-sm font-medium transition-colors",
                   isActive ? "text-accent" : "text-foreground/70",
                 )
               }
@@ -41,38 +85,7 @@ export function Navbar() {
             </NavLink>
           ))}
         </div>
-
-        <button
-          className="md:hidden"
-          onClick={() => setOpen((v) => !v)}
-          aria-label="Toggle menu"
-        >
-          {open ? <X /> : <Menu />}
-        </button>
-      </nav>
-
-      {open && (
-        <div className="border-t border-border/60 md:hidden">
-          <div className="container flex flex-col py-2">
-            {links.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                end={l.to === "/"}
-                onClick={() => setOpen(false)}
-                className={({ isActive }) =>
-                  cn(
-                    "py-3 text-sm font-medium",
-                    isActive ? "text-accent" : "text-foreground/70",
-                  )
-                }
-              >
-                {l.label}
-              </NavLink>
-            ))}
-          </div>
-        </div>
-      )}
+      </div>
     </header>
   );
 }

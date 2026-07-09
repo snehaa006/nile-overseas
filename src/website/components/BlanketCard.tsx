@@ -22,7 +22,7 @@ export function BlanketCard({
   return (
     <Link
       to={to}
-      className="group flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
+      className="group flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-300 ease-smooth hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/5"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         {img ? (
@@ -44,7 +44,7 @@ export function BlanketCard({
         )}
       </div>
       <div className="flex flex-1 flex-col p-4">
-        <h3 className="font-serif text-lg font-semibold leading-snug">
+        <h3 className="font-serif text-lg font-semibold leading-snug transition-colors group-hover:text-accent">
           {blanket.name}
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">

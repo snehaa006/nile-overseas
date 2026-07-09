@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { qk } from "@/shared/lib/queryClient";
 import {
+  fetchAllMonthlyStock,
   fetchMonthStock,
   fetchProductMonthlySummary,
   fetchStockMonths,
@@ -24,6 +25,10 @@ export function useStockMonths() {
   return useQuery({ queryKey: qk.stockMonths, queryFn: fetchStockMonths });
 }
 
+export function useAllMonthlyStock() {
+  return useQuery({ queryKey: qk.allStock, queryFn: fetchAllMonthlyStock });
+}
+
 export function useProductMonthlySummary() {
   return useQuery({
     queryKey: qk.reportSummary,
@@ -38,6 +43,7 @@ export function useUpsertStock(month: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.stock(month) });
       qc.invalidateQueries({ queryKey: qk.stockMonths });
+      qc.invalidateQueries({ queryKey: qk.allStock });
       qc.invalidateQueries({ queryKey: qk.reportSummary });
       qc.invalidateQueries({ queryKey: qk.dashboard });
     },
@@ -48,6 +54,9 @@ export function useToggleMonthLock(month: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (locked: boolean) => setMonthLock(month, locked),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.stock(month) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.stock(month) });
+      qc.invalidateQueries({ queryKey: qk.allStock });
+    },
   });
 }

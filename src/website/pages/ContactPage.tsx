@@ -21,7 +21,7 @@ export function ContactPage() {
 
   return (
     <div className="container max-w-4xl py-16">
-      <div className="text-center">
+      <div className="animate-fade-in-up text-center">
         <h1 className="font-serif text-4xl font-bold text-primary">Get in Touch</h1>
         <p className="mt-3 text-muted-foreground">
           We'd love to hear from you. Reach out for orders, pricing or partnership enquiries.
@@ -29,13 +29,14 @@ export function ContactPage() {
       </div>
 
       <div className="mt-12 grid gap-6 sm:grid-cols-2">
-        {rows.map((r) => (
+        {rows.map((r, i) => (
           <a
             key={r.label}
             href={r.href}
             target={r.href?.startsWith("http") ? "_blank" : undefined}
             rel="noreferrer"
-            className="flex items-start gap-4 rounded-xl border bg-card p-6 transition hover:shadow-md"
+            style={{ animationDelay: `${i * 80}ms` }}
+            className="flex animate-fade-in-up items-start gap-4 rounded-xl border bg-card p-6 transition-all duration-300 ease-smooth hover:-translate-y-1 hover:shadow-lg"
           >
             <div className="rounded-lg bg-accent/10 p-3 text-accent">
               <r.icon className="h-5 w-5" />

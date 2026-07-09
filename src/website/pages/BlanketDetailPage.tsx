@@ -46,9 +46,11 @@ export function BlanketDetailPage() {
       </Link>
 
       <div className="grid gap-12 md:grid-cols-2">
-        <ImageGallery images={blanket.images} />
+        <div className="animate-fade-in-up">
+          <ImageGallery images={blanket.images} />
+        </div>
 
-        <div className="flex flex-col">
+        <div className="flex animate-fade-in-up flex-col" style={{ animationDelay: "120ms" }}>
           <Badge variant="secondary" className="w-fit">
             {blanket.brand.name}
           </Badge>
@@ -70,7 +72,7 @@ export function BlanketDetailPage() {
             </span>
           </div>
 
-          <div className="mt-8 rounded-xl border bg-secondary/40 p-6">
+          <div className="mt-8 rounded-xl border bg-secondary/40 p-6 transition-shadow hover:shadow-md">
             <p className="text-sm text-muted-foreground">
               Interested in this blanket or need bulk pricing? Reach out and our
               team will help you with orders and availability.

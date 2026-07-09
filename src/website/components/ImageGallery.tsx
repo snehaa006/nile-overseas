@@ -18,9 +18,10 @@ export function ImageGallery({ images }: { images: BlanketImage[] }) {
     <div className="flex flex-col gap-3">
       <div className="aspect-square overflow-hidden rounded-xl border bg-muted">
         <img
+          key={images[active].id}
           src={images[active].image_url}
           alt={`View ${active + 1}`}
-          className="h-full w-full object-cover"
+          className="h-full w-full animate-fade-in object-cover"
         />
       </div>
       {images.length > 1 && (
@@ -30,8 +31,10 @@ export function ImageGallery({ images }: { images: BlanketImage[] }) {
               key={img.id}
               onClick={() => setActive(i)}
               className={cn(
-                "h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition",
-                i === active ? "border-accent" : "border-transparent opacity-70",
+                "h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-all duration-200 ease-smooth",
+                i === active
+                  ? "border-accent opacity-100"
+                  : "border-transparent opacity-70 hover:opacity-100",
               )}
             >
               <img

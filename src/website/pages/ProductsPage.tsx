@@ -1,6 +1,7 @@
 import { useCatalogue } from "@/shared/hooks/useCatalogue";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { ErrorState, EmptyState } from "@/shared/components/StateViews";
+import { Reveal } from "@/shared/components/Reveal";
 import { BlanketCard } from "../components/BlanketCard";
 
 export function ProductsPage() {
@@ -8,7 +9,7 @@ export function ProductsPage() {
 
   return (
     <div className="container py-16">
-      <div className="mb-12 text-center">
+      <div className="mb-12 text-center animate-fade-in-up">
         <h1 className="font-serif text-4xl font-bold text-primary">
           Our Blankets
         </h1>
@@ -51,8 +52,10 @@ export function ProductsPage() {
               </span>
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {brand.blankets.map((b) => (
-                <BlanketCard key={b.id} blanket={b} brandName={brand.name} />
+              {brand.blankets.map((b, i) => (
+                <Reveal key={b.id} delay={(i % 4) * 80}>
+                  <BlanketCard blanket={b} brandName={brand.name} />
+                </Reveal>
               ))}
             </div>
           </section>
