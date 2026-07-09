@@ -22,7 +22,7 @@ export function BlanketCard({
   return (
     <Link
       to={to}
-      className="group flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-300 ease-smooth hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/5"
+      className="group isolate flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-[transform,box-shadow] duration-300 ease-smooth [transform:translateZ(0)] hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/5"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         {img ? (
