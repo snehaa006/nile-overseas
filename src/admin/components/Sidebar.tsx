@@ -8,6 +8,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { useSettings } from "@/shared/hooks/useSettings";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/shared/components/ui/button";
 
@@ -21,10 +22,14 @@ const items = [
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { signOut, session } = useAuth();
+  const { data: settings } = useSettings();
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center border-b px-6">
+      <div className="flex h-16 items-center gap-2.5 border-b px-6">
+        {settings?.logo_url && (
+          <img src={settings.logo_url} alt="" className="h-8 w-8 object-contain" />
+        )}
         <span className="font-serif text-lg font-bold text-primary">
           Nile Overseas
         </span>

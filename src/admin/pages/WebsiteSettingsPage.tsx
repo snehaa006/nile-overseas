@@ -11,10 +11,12 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { LoadingState, Spinner } from "@/shared/components/StateViews";
 import { BrandLogoManager } from "@/admin/components/BrandLogoManager";
+import { SiteLogoManager } from "@/admin/components/SiteLogoManager";
 
 const schema = z.object({
   company_name: z.string().min(1, "Company name is required"),
   about_text: z.string().optional().nullable(),
+  established_year: z.coerce.number().int().min(1900).max(new Date().getFullYear()),
   phone: z.string().optional().nullable(),
   whatsapp: z.string().optional().nullable(),
   email: z.string().email("Invalid email").or(z.literal("")).optional().nullable(),
@@ -62,6 +64,9 @@ export function WebsiteSettingsPage() {
             <Field label="Company name" error={errors.company_name?.message}>
               <Input {...register("company_name")} />
             </Field>
+            <Field label="Established year" error={errors.established_year?.message}>
+              <Input type="number" className="max-w-32" {...register("established_year")} />
+            </Field>
             <Field label="About section" error={errors.about_text?.message}>
               <Textarea rows={5} {...register("about_text")} />
             </Field>
@@ -97,6 +102,18 @@ export function WebsiteSettingsPage() {
           </Button>
         </div>
       </form>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Site logo</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            The main Nile Overseas logo, shown site-wide.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <SiteLogoManager />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

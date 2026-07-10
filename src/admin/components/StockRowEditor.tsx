@@ -1,7 +1,7 @@
 import { ArrowDownToLine } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { TableCell, TableRow } from "@/shared/components/ui/table";
-import { formatNumber } from "@/shared/utils/format";
+import { formatNumber, formatWeight } from "@/shared/utils/format";
 import type { DayStockLine } from "@/shared/api/stock";
 
 export type RowValues = { opening: string; production: string; sales: string };
@@ -52,6 +52,9 @@ export function StockRowEditor({
       <TableCell className="font-medium">
         {line.name}
         <span className="ml-2 font-mono text-xs text-muted-foreground">{line.sku}</span>
+        <span className="ml-2 whitespace-nowrap text-xs text-muted-foreground">
+          &middot; {formatWeight(line.weight_kg)}
+        </span>
       </TableCell>
       <TableCell>
         {openingIsEditable ? (

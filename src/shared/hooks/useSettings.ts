@@ -4,7 +4,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { qk } from "@/shared/lib/queryClient";
-import { fetchSettings, updateSettings } from "@/shared/api/settings";
+import { fetchSettings, updateSettings, uploadSiteLogo, removeSiteLogo } from "@/shared/api/settings";
 import type { TablesUpdate } from "@/shared/types/database";
 
 export function useSettings() {
@@ -15,6 +15,23 @@ export function useUpdateSettings() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: TablesUpdate<"site_settings">) => updateSettings(input),
+    onSuccess: (data) => qc.setQueryData(qk.settings, data),
+  });
+}
+
+export function useUploadSiteLogo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { currentUrl: string | null | undefined; file: File }) =>
+      uploadSiteLogo(args.currentUrl, args.file),
+    onSuccess: (data) => qc.setQueryData(qk.settings, data),
+  });
+}
+
+export function useRemoveSiteLogo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (currentUrl: string | null | undefined) => removeSiteLogo(currentUrl),
     onSuccess: (data) => qc.setQueryData(qk.settings, data),
   });
 }
