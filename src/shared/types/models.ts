@@ -6,7 +6,21 @@ export type Brand = Tables<"products">;
 export type Blanket = Tables<"blankets">;
 export type BlanketImage = Tables<"blanket_images">;
 export type DailyStock = Tables<"daily_stock">;
+export type ProcessEntry = Tables<"process_entries">;
+export type Agent = Tables<"agents">;
+export type Customer = Tables<"customers">;
+export type ProductionEntry = Tables<"production_entries">;
 export type SiteSettings = Tables<"site_settings">;
+
+/** The four fixed manufacturing processes tracked in the Process tab. */
+export const PROCESSES = ["raschal", "polish", "printing", "brushing"] as const;
+export type Process = (typeof PROCESSES)[number];
+export const PROCESS_LABELS: Record<Process, string> = {
+  raschal: "Raschal",
+  polish: "Polish",
+  printing: "Printing",
+  brushing: "Brushing",
+};
 export type BlanketMonthlyStock = Views<"blanket_monthly_stock">;
 export type BlanketYearlyStock = Views<"blanket_yearly_stock">;
 

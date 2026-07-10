@@ -140,9 +140,8 @@ export function StockRollupView({
                     </TableCell>
                     <TableCell className="py-4 font-medium">
                       {r.blanket_name}
-                      <span className="ml-2 font-mono text-xs text-muted-foreground">{r.sku}</span>
                       <span className="ml-2 whitespace-nowrap text-xs text-muted-foreground">
-                        &middot; {formatWeight(r.weight_kg)}
+                        {formatWeight(r.weight_kg)}
                       </span>
                     </TableCell>
                     <TableCell className="py-4 text-right tabular-nums text-muted-foreground">{formatNumber(r.opening_stock)}</TableCell>

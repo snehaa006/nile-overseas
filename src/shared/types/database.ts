@@ -137,6 +137,103 @@ export type Database = {
           },
         ];
       };
+      process_entries: {
+        Row: {
+          blanket_id: string | null;
+          created_at: string;
+          date: string;
+          id: string;
+          kg: number;
+          process: string;
+          roll: number;
+          updated_at: string;
+        };
+        Insert: {
+          blanket_id?: string | null;
+          created_at?: string;
+          date: string;
+          id?: string;
+          kg?: number;
+          process: string;
+          roll?: number;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["process_entries"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "process_entries_blanket_id_fkey";
+            columns: ["blanket_id"];
+            isOneToOne: false;
+            referencedRelation: "blankets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      agents: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["agents"]["Insert"]>;
+        Relationships: [];
+      };
+      customers: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["customers"]["Insert"]>;
+        Relationships: [];
+      };
+      production_entries: {
+        Row: {
+          agent_id: string | null;
+          amount: number;
+          created_at: string;
+          customer_id: string | null;
+          date: string;
+          id: string;
+          updated_at: string;
+        };
+        Insert: {
+          agent_id?: string | null;
+          amount?: number;
+          created_at?: string;
+          customer_id?: string | null;
+          date: string;
+          id?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["production_entries"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "production_entries_agent_id_fkey";
+            columns: ["agent_id"];
+            isOneToOne: false;
+            referencedRelation: "agents";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "production_entries_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       site_settings: {
         Row: {
           about_text: string | null;
@@ -220,6 +317,44 @@ export type Database = {
           total_sales: number | null;
           total_stock: number | null;
           year: string | null;
+        };
+        Relationships: [];
+      };
+      process_monthly_totals: {
+        Row: {
+          process: string | null;
+          month: string | null;
+          roll: number | null;
+          kg: number | null;
+          entries: number | null;
+        };
+        Relationships: [];
+      };
+      process_yearly_totals: {
+        Row: {
+          process: string | null;
+          year: string | null;
+          roll: number | null;
+          kg: number | null;
+          entries: number | null;
+        };
+        Relationships: [];
+      };
+      production_agent_monthly: {
+        Row: {
+          agent_id: string | null;
+          month: string | null;
+          amount: number | null;
+          entries: number | null;
+        };
+        Relationships: [];
+      };
+      production_customer_monthly: {
+        Row: {
+          customer_id: string | null;
+          month: string | null;
+          amount: number | null;
+          entries: number | null;
         };
         Relationships: [];
       };

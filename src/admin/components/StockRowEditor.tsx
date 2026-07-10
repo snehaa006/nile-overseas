@@ -52,9 +52,8 @@ export function StockRowEditor({
     <TableRow>
       <TableCell className="py-4 font-medium">
         {line.name}
-        <span className="ml-2 font-mono text-xs text-muted-foreground">{line.sku}</span>
         <span className="ml-2 whitespace-nowrap text-xs text-muted-foreground">
-          &middot; {formatWeight(line.weight_kg)}
+          {formatWeight(line.weight_kg)}
         </span>
       </TableCell>
       <TableCell className="py-4 text-right">
