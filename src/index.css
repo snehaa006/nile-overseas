@@ -4,24 +4,24 @@
 
 @layer base {
   :root {
-    /* Sunset palette: light peach background, deep wine primary, rose accent. */
-    --background: 24 45% 97%;
-    --foreground: 320 30% 14%;
+    /* Midnight / Pearl Perfect / Noir / Ocean palette on a white base. */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 5%;
     --card: 0 0% 100%;
-    --card-foreground: 320 30% 14%;
-    --primary: 338 49% 35%;
-    --primary-foreground: 30 45% 97%;
-    --secondary: 24 70% 93%;
-    --secondary-foreground: 330 35% 20%;
-    --muted: 24 25% 95%;
-    --muted-foreground: 20 12% 42%;
-    --accent: 350 65% 60%;
+    --card-foreground: 0 0% 5%;
+    --primary: 219 56% 19%;
+    --primary-foreground: 47 52% 91%;
+    --secondary: 211 30% 96%;
+    --secondary-foreground: 219 56% 19%;
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 10% 40%;
+    --accent: 211 32% 57%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
-    --border: 24 20% 88%;
-    --input: 24 18% 84%;
-    --ring: 350 65% 60%;
+    --border: 220 15% 88%;
+    --input: 220 15% 85%;
+    --ring: 211 32% 57%;
     --radius: 0.75rem;
   }
 

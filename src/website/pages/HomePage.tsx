@@ -56,8 +56,8 @@ export function HomePage() {
     <>
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-b from-secondary/60 to-background">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-sunset-200/40 blur-3xl animate-float" />
-        <div className="pointer-events-none absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-sunset-400/20 blur-3xl animate-float" style={{ animationDelay: "1.5s" }} />
+        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand-ocean/30 blur-3xl animate-float" />
+        <div className="pointer-events-none absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-brand-midnight/15 blur-3xl animate-float" style={{ animationDelay: "1.5s" }} />
         <div className="container relative grid gap-10 py-20 md:grid-cols-2 md:py-28">
           <div className="flex flex-col justify-center animate-fade-in-up">
             <div className="flex flex-wrap items-center gap-3">
@@ -87,7 +87,7 @@ export function HomePage() {
             </div>
           </div>
           <div className="relative hidden md:block animate-scale-in" style={{ animationDelay: "150ms" }}>
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-sunset-200/30 via-sunset-300/15 to-primary/10" />
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-brand-ocean/20 via-brand-midnight/10 to-primary/10" />
             <div className="relative grid h-full grid-cols-2 gap-4 p-4">
               {featured.slice(0, 2).map(({ blanket, brand }, i) => (
                 <div
@@ -207,8 +207,8 @@ export function HomePage() {
 
       {/* CTA banner */}
       <Reveal as="section" className="container pb-20">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-sunset-500 to-sunset-600 px-8 py-14 text-center text-white shadow-lg sm:px-16">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-sunset-200/20 blur-3xl" />
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-midnight to-brand-noir px-8 py-14 text-center text-white shadow-lg sm:px-16">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand-ocean/20 blur-3xl" />
           <h2 className="relative font-serif text-3xl font-bold text-balance">
             Ready to stock premium blankets?
           </h2>

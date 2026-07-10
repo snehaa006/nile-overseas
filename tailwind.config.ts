@@ -41,14 +41,12 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
         // Raw brand palette for gradients, blobs and decorative accents —
-        // lightest to darkest, independent of the semantic tokens above.
-        sunset: {
-          100: "#FFBB94",
-          200: "#FB9590",
-          300: "#DC586D",
-          400: "#A33757",
-          500: "#852E4E",
-          600: "#4C1D3D",
+        // independent of the semantic tokens above.
+        brand: {
+          midnight: "#16294D",
+          pearl: "#F4EFDC",
+          noir: "#0D0D0D",
+          ocean: "#7091B5",
         },
       },
       borderRadius: {
