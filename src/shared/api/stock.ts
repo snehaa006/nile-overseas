@@ -78,8 +78,8 @@ export type UpsertStockInput = {
   notes?: string | null;
 };
 
-/** Insert or update a day's line for a blanket (closing_stock is generated). */
-export async function upsertStock(input: UpsertStockInput): Promise<void> {
+/** Insert or update one or more blankets' lines for a day in a single request (closing_stock is generated). */
+export async function upsertStock(input: UpsertStockInput | UpsertStockInput[]): Promise<void> {
   const { error } = await supabase
     .from("daily_stock")
     .upsert(input, { onConflict: "blanket_id,date" });

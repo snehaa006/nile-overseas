@@ -49,7 +49,7 @@ export function useProductMonthlySummary() {
 export function useUpsertStock(date: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: UpsertStockInput) => upsertStock(input),
+    mutationFn: (input: UpsertStockInput | UpsertStockInput[]) => upsertStock(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.dayStock(date) });
       qc.invalidateQueries({ queryKey: qk.stockDates });
