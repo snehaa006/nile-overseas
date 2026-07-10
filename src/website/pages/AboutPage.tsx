@@ -48,38 +48,27 @@ export function AboutPage() {
       </Reveal>
 
       <div className="mt-12 grid gap-6 sm:grid-cols-2">
-        <Reveal>
-          <div className="flex flex-col rounded-xl border bg-card p-6 transition-all duration-300 ease-smooth hover:-translate-y-1 hover:shadow-lg">
-            {brandLogo("Paris Royale DRJ") && (
-              <img
-                src={brandLogo("Paris Royale DRJ")}
-                alt="Paris Royale DRJ logo"
-                className="mb-3 h-12 w-auto object-contain"
-                loading="lazy"
-              />
-            )}
-            <h3 className="font-serif text-2xl font-bold text-primary">Paris Royale DRJ</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {BRAND_BLURBS["Paris Royale DRJ"]}
-            </p>
-          </div>
-        </Reveal>
-        <Reveal delay={100}>
-          <div className="flex flex-col rounded-xl border bg-card p-6 transition-all duration-300 ease-smooth hover:-translate-y-1 hover:shadow-lg">
-            {brandLogo("CloudNine") && (
-              <img
-                src={brandLogo("CloudNine")}
-                alt="CloudNine logo"
-                className="mb-3 h-12 w-auto object-contain"
-                loading="lazy"
-              />
-            )}
-            <h3 className="font-serif text-2xl font-bold text-primary">CloudNine</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {BRAND_BLURBS.CloudNine}
-            </p>
-          </div>
-        </Reveal>
+        {(brands ?? []).map((brand, i) => {
+          const logo = brandLogo(brand.name, brand.logo_url);
+          return (
+            <Reveal key={brand.id} delay={i * 100}>
+              <div className="flex flex-col rounded-xl border bg-card p-6 transition-all duration-300 ease-smooth hover:-translate-y-1 hover:shadow-lg">
+                {logo && (
+                  <img
+                    src={logo}
+                    alt={`${brand.name} logo`}
+                    className="mb-3 h-12 w-auto object-contain"
+                    loading="lazy"
+                  />
+                )}
+                <h3 className="font-serif text-2xl font-bold text-primary">{brand.name}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {BRAND_BLURBS[brand.name] ?? brand.description ?? "Explore the range."}
+                </p>
+              </div>
+            </Reveal>
+          );
+        })}
       </div>
     </div>
   );

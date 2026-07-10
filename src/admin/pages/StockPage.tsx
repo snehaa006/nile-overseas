@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Lock, Unlock, Download, Check } from "lucide-react";
+import { Lock, Unlock, Download, Check, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   useDayStock, useToggleDayLock, useMonthlyRollup, useYearlyRollup, useUpsertStock,
@@ -31,6 +31,7 @@ export function StockPage() {
   const yearlyRollup = useYearlyRollup();
 
   const [rowValues, setRowValues] = useState<Record<string, RowValues>>({});
+  const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     if (!lines) return;
@@ -38,6 +39,11 @@ export function StockPage() {
     for (const line of lines) next[line.blanket_id] = initialRowValues(line);
     setRowValues(next);
   }, [lines]);
+
+  // Switching days mid-edit would silently edit a different day's figures — bail out instead.
+  useEffect(() => {
+    setEditMode(false);
+  }, [date]);
 
   const updateValue = (blanketId: string, field: "opening" | "production" | "sales", value: string) => {
     setRowValues((prev) => ({ ...prev, [blanketId]: { ...prev[blanketId], [field]: value } }));
@@ -91,7 +97,10 @@ export function StockPage() {
   };
 
   const handleSaveAll = async () => {
-    if (dirtyLines.length === 0) return;
+    if (dirtyLines.length === 0) {
+      setEditMode(false);
+      return;
+    }
     try {
       await upsertAll.mutateAsync(
         dirtyLines.map((line) => {
@@ -108,9 +117,19 @@ export function StockPage() {
         }),
       );
       toast.success(`Saved ${dirtyLines.length} ${dirtyLines.length === 1 ? "blanket" : "blankets"}`);
+      setEditMode(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Save failed");
     }
+  };
+
+  const handleCancelEdit = () => {
+    if (lines) {
+      const next: Record<string, RowValues> = {};
+      for (const line of lines) next[line.blanket_id] = initialRowValues(line);
+      setRowValues(next);
+    }
+    setEditMode(false);
   };
 
   const handleExport = () => {
@@ -161,14 +180,25 @@ export function StockPage() {
               <Button variant="outline" size="sm" onClick={handleExport} disabled={!lines?.length}>
                 <Download className="h-4 w-4" /> Export CSV
               </Button>
-              <Button variant="outline" onClick={handleLock} disabled={toggleLock.isPending}>
+              <Button variant="outline" onClick={handleLock} disabled={editMode || toggleLock.isPending}>
                 {locked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                 {locked ? "Unlock" : "Lock day"}
               </Button>
-              <Button onClick={handleSaveAll} disabled={locked || dirtyLines.length === 0 || upsertAll.isPending}>
-                {upsertAll.isPending ? <Spinner className="h-4 w-4" /> : <Check className="h-4 w-4" />}
-                Save {dirtyLines.length > 0 ? `(${dirtyLines.length})` : "all"}
-              </Button>
+              {editMode ? (
+                <>
+                  <Button variant="outline" onClick={handleCancelEdit} disabled={upsertAll.isPending}>
+                    <X className="h-4 w-4" /> Cancel
+                  </Button>
+                  <Button onClick={handleSaveAll} disabled={upsertAll.isPending}>
+                    {upsertAll.isPending ? <Spinner className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+                    Save {dirtyLines.length > 0 ? `(${dirtyLines.length})` : ""}
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => setEditMode(true)} disabled={locked || byBrand.length === 0}>
+                  <Pencil className="h-4 w-4" /> Edit
+                </Button>
+              )}
             </div>
           </div>
 
@@ -198,11 +228,11 @@ export function StockPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Blanket</TableHead>
-                        <TableHead>Opening</TableHead>
-                        <TableHead>Production</TableHead>
-                        <TableHead>Sales</TableHead>
-                        <TableHead>Closing</TableHead>
+                        <TableHead className="font-bold text-foreground">Blanket</TableHead>
+                        <TableHead className="text-right font-bold text-foreground">Opening</TableHead>
+                        <TableHead className="text-right font-bold text-foreground">Production</TableHead>
+                        <TableHead className="text-right font-bold text-foreground">Sales</TableHead>
+                        <TableHead className="text-right font-bold text-foreground">Closing</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -212,7 +242,7 @@ export function StockPage() {
                           line={line}
                           values={rowValues[line.blanket_id] ?? initialRowValues(line)}
                           onChange={(field, value) => updateValue(line.blanket_id, field, value)}
-                          locked={locked}
+                          editing={editMode}
                         />
                       ))}
                     </TableBody>
