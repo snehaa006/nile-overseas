@@ -9,6 +9,7 @@ export type DailyStock = Tables<"daily_stock">;
 export type ProcessEntry = Tables<"process_entries">;
 export type Agent = Tables<"agents">;
 export type Customer = Tables<"customers">;
+export type Client = Tables<"clients">;
 export type ProductionEntry = Tables<"production_entries">;
 export type SiteSettings = Tables<"site_settings">;
 

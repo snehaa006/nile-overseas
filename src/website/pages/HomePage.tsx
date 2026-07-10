@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { BlanketCard } from "../components/BlanketCard";
 import { BrandCard } from "../components/BrandCard";
+import { FeaturedCarousel } from "../components/FeaturedCarousel";
 import { Reveal } from "@/shared/components/Reveal";
 import type { BlanketWithImages } from "@/shared/types/models";
 
@@ -43,10 +44,12 @@ export function HomePage() {
   const { data: brands, isLoading } = useCatalogue();
   const { data: settings } = useSettings();
 
-  const featured: { blanket: BlanketWithImages; brand: string }[] =
-    (brands ?? [])
-      .flatMap((b) => b.blankets.map((bl) => ({ blanket: bl, brand: b.name })))
-      .slice(0, 4);
+  const allBlankets: { blanket: BlanketWithImages; brand: string }[] =
+    (brands ?? []).flatMap((b) =>
+      b.blankets.map((bl) => ({ blanket: bl, brand: b.name })),
+    );
+  const featured = allBlankets.slice(0, 4);
+  const carouselItems = allBlankets.slice(0, 10);
 
   const establishedYear = settings?.established_year ?? 2014;
   const yearsOfCraft = new Date().getFullYear() - establishedYear;
@@ -192,14 +195,8 @@ export function HomePage() {
               <Skeleton key={i} className="aspect-[4/3] rounded-xl" />
             ))}
           </div>
-        ) : featured.length > 0 ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {featured.map(({ blanket, brand }, i) => (
-              <Reveal key={blanket.id} delay={i * 80}>
-                <BlanketCard blanket={blanket} brandName={brand} />
-              </Reveal>
-            ))}
-          </div>
+        ) : carouselItems.length > 0 ? (
+          <FeaturedCarousel items={carouselItems} />
         ) : (
           <p className="text-muted-foreground">Products coming soon.</p>
         )}
