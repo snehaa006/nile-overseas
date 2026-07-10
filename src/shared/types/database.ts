@@ -99,14 +99,14 @@ export type Database = {
           },
         ];
       };
-      monthly_stock: {
+      daily_stock: {
         Row: {
           blanket_id: string;
           closing_stock: number | null;
           created_at: string;
+          date: string;
           id: string;
           is_locked: boolean;
-          month: string;
           notes: string | null;
           opening_stock: number;
           production: number;
@@ -117,19 +117,19 @@ export type Database = {
           blanket_id: string;
           closing_stock?: number | null;
           created_at?: string;
+          date: string;
           id?: string;
           is_locked?: boolean;
-          month: string;
           notes?: string | null;
           opening_stock?: number;
           production?: number;
           sales?: number;
           updated_at?: string;
         };
-        Update: Partial<Database["public"]["Tables"]["monthly_stock"]["Insert"]>;
+        Update: Partial<Database["public"]["Tables"]["daily_stock"]["Insert"]>;
         Relationships: [
           {
-            foreignKeyName: "monthly_stock_blanket_id_fkey";
+            foreignKeyName: "daily_stock_blanket_id_fkey";
             columns: ["blanket_id"];
             isOneToOne: false;
             referencedRelation: "blankets";
@@ -165,6 +165,38 @@ export type Database = {
       };
     };
     Views: {
+      blanket_monthly_stock: {
+        Row: {
+          blanket_id: string | null;
+          closing_stock: number | null;
+          days_recorded: number | null;
+          month: string | null;
+          opening_stock: number | null;
+          production: number | null;
+          sales: number | null;
+        };
+        Relationships: [];
+      };
+      blanket_yearly_stock: {
+        Row: {
+          blanket_id: string | null;
+          closing_stock: number | null;
+          days_recorded: number | null;
+          opening_stock: number | null;
+          production: number | null;
+          sales: number | null;
+          year: string | null;
+        };
+        Relationships: [];
+      };
+      blanket_latest_stock: {
+        Row: {
+          blanket_id: string | null;
+          closing_stock: number | null;
+          date: string | null;
+        };
+        Relationships: [];
+      };
       product_monthly_summary: {
         Row: {
           month: string | null;
@@ -173,6 +205,17 @@ export type Database = {
           total_production: number | null;
           total_sales: number | null;
           total_stock: number | null;
+        };
+        Relationships: [];
+      };
+      product_yearly_summary: {
+        Row: {
+          product_id: string | null;
+          product_name: string | null;
+          total_production: number | null;
+          total_sales: number | null;
+          total_stock: number | null;
+          year: string | null;
         };
         Relationships: [];
       };

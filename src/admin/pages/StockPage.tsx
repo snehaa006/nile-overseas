@@ -1,27 +1,31 @@
 import { useMemo, useState } from "react";
 import { Lock, Unlock, Download } from "lucide-react";
 import { toast } from "sonner";
-import { useMonthStock, useToggleMonthLock } from "@/shared/hooks/useStock";
+import {
+  useDayStock, useToggleDayLock, useMonthlyRollup, useYearlyRollup,
+} from "@/shared/hooks/useStock";
 import { StockRowEditor } from "../components/StockRowEditor";
-import { AllMonthsView } from "../components/AllMonthsView";
+import { StockRollupView } from "../components/StockRollupView";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/components/ui/tabs";
-import { MonthPicker } from "@/shared/components/ui/month-picker";
+import { DatePicker } from "@/shared/components/ui/date-picker";
 import {
   Table, TableBody, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
 import { LoadingState, ErrorState, EmptyState } from "@/shared/components/StateViews";
-import { formatMonth, formatNumber, monthKey } from "@/shared/utils/format";
+import { dateKey, formatDate, formatMonth, formatNumber, formatYear } from "@/shared/utils/format";
 import { downloadCsv, toCsv } from "@/shared/utils/csv";
-import type { MonthStockLine } from "@/shared/api/stock";
+import type { DayStockLine } from "@/shared/api/stock";
 
-export function MonthlyStockPage() {
-  const [monthInput, setMonthInput] = useState(monthKey().slice(0, 7)); // YYYY-MM
-  const month = `${monthInput}-01`;
-  const { data: lines, isLoading, isError, error, refetch } = useMonthStock(month);
-  const toggleLock = useToggleMonthLock(month);
+export function StockPage() {
+  const [date, setDate] = useState(dateKey());
+  const { data: lines, isLoading, isError, error, refetch } = useDayStock(date);
+  const toggleLock = useToggleDayLock(date);
+
+  const monthlyRollup = useMonthlyRollup();
+  const yearlyRollup = useYearlyRollup();
 
   const locked = useMemo(
     () => Boolean(lines?.some((l) => l.stock?.is_locked)),
@@ -29,7 +33,7 @@ export function MonthlyStockPage() {
   );
 
   const byBrand = useMemo(() => {
-    const map = new Map<string, MonthStockLine[]>();
+    const map = new Map<string, DayStockLine[]>();
     for (const line of lines ?? []) {
       const arr = map.get(line.brand_name) ?? [];
       arr.push(line);
@@ -54,12 +58,12 @@ export function MonthlyStockPage() {
 
   const handleLock = async () => {
     if (!hasAnyData) {
-      toast.error("Add stock data before locking the month.");
+      toast.error("Add stock data before locking the day.");
       return;
     }
     try {
       await toggleLock.mutateAsync(!locked);
-      toast.success(locked ? "Month unlocked" : "Month locked");
+      toast.success(locked ? "Day unlocked" : "Day locked");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
     }
@@ -77,30 +81,31 @@ export function MonthlyStockPage() {
       l.stock?.sales ?? 0,
       l.stock?.closing_stock ?? (l.priorClosing ?? 0),
     ]);
-    downloadCsv(`nile-overseas-stock-${monthInput}.csv`, toCsv(headers, rows));
+    downloadCsv(`nile-overseas-stock-${date}.csv`, toCsv(headers, rows));
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-primary">Monthly Stock</h1>
+          <h1 className="font-serif text-3xl font-bold text-primary">Stock</h1>
           <p className="text-muted-foreground">
-            Opening + Production − Sales = Closing. Opening carries forward automatically.
+            Opening + Production − Sales = Closing. Opening carries forward automatically, day to day.
           </p>
         </div>
       </div>
 
-      <Tabs defaultValue="month">
+      <Tabs defaultValue="day">
         <TabsList>
-          <TabsTrigger value="month">Single Month</TabsTrigger>
-          <TabsTrigger value="all">All Months</TabsTrigger>
+          <TabsTrigger value="day">Daily Entry</TabsTrigger>
+          <TabsTrigger value="month">Monthly Summary</TabsTrigger>
+          <TabsTrigger value="year">Yearly Summary</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="month" className="space-y-6">
+        <TabsContent value="day" className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <MonthPicker value={monthInput} onChange={setMonthInput} />
+              <DatePicker value={date} onChange={setDate} />
               {locked ? (
                 <Badge variant="muted"><Lock className="mr-1 h-3 w-3" /> Locked</Badge>
               ) : (
@@ -113,13 +118,13 @@ export function MonthlyStockPage() {
               </Button>
               <Button variant="outline" onClick={handleLock} disabled={toggleLock.isPending}>
                 {locked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                {locked ? "Unlock" : "Lock month"}
+                {locked ? "Unlock" : "Lock day"}
               </Button>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <Summary label={`${formatMonth(month)} production`} value={totals.production} />
+            <Summary label={`${formatDate(date)} production`} value={totals.production} />
             <Summary label="Sales" value={totals.sales} />
             <Summary label="Closing stock" value={totals.closing} />
           </div>
@@ -131,7 +136,7 @@ export function MonthlyStockPage() {
           ) : byBrand.length === 0 ? (
             <EmptyState
               title="No active blankets"
-              description="Add and activate blankets to track their monthly stock."
+              description="Add and activate blankets to track their daily stock."
             />
           ) : (
             byBrand.map(([brand, brandLines]) => (
@@ -157,7 +162,7 @@ export function MonthlyStockPage() {
                         <StockRowEditor
                           key={line.blanket_id}
                           line={line}
-                          month={month}
+                          date={date}
                           locked={locked}
                         />
                       ))}
@@ -169,8 +174,32 @@ export function MonthlyStockPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="all">
-          <AllMonthsView />
+        <TabsContent value="month">
+          <StockRollupView
+            rows={monthlyRollup.data?.map((r) => ({ ...r, period: r.month }))}
+            isLoading={monthlyRollup.isLoading}
+            isError={monthlyRollup.isError}
+            error={monthlyRollup.error}
+            refetch={monthlyRollup.refetch}
+            formatPeriod={formatMonth}
+            emptyTitle="No monthly history yet"
+            emptyDescription="Once you save a few days of stock, monthly totals appear here."
+            csvFilenamePrefix="nile-overseas-monthly"
+          />
+        </TabsContent>
+
+        <TabsContent value="year">
+          <StockRollupView
+            rows={yearlyRollup.data?.map((r) => ({ ...r, period: r.year }))}
+            isLoading={yearlyRollup.isLoading}
+            isError={yearlyRollup.isError}
+            error={yearlyRollup.error}
+            refetch={yearlyRollup.refetch}
+            formatPeriod={formatYear}
+            emptyTitle="No yearly history yet"
+            emptyDescription="Once you save stock across the year, yearly totals appear here."
+            csvFilenamePrefix="nile-overseas-yearly"
+          />
         </TabsContent>
       </Tabs>
     </div>

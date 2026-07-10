@@ -14,7 +14,7 @@ import { Button } from "@/shared/components/ui/button";
 const items = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/products", label: "Products", icon: Package, end: false },
-  { to: "/admin/stock", label: "Monthly Stock", icon: Boxes, end: false },
+  { to: "/admin/stock", label: "Stock", icon: Boxes, end: false },
   { to: "/admin/reports", label: "Reports", icon: BarChart3, end: false },
   { to: "/admin/settings", label: "Website Settings", icon: Settings, end: false },
 ];

@@ -2,14 +2,14 @@ import { supabase } from "@/shared/lib/supabase";
 import type { StockRow } from "@/shared/types/models";
 import type { Views } from "@/shared/types/database";
 
-export type MonthStockLine = {
+export type DayStockLine = {
   blanket_id: string;
   name: string;
   sku: string | null;
   product_id: string;
   brand_name: string;
   stock: StockRow | null;
-  /** Prior month's closing stock, when the row for this month doesn't exist yet. */
+  /** Prior day's closing stock, when the row for this date doesn't exist yet. */
   priorClosing: number | null;
 };
 
@@ -25,26 +25,26 @@ async function fetchActiveBlanketsWithBrand() {
 }
 
 /**
- * All ACTIVE blankets for a month, left-joined to their stock row.
+ * All ACTIVE blankets for a date, left-joined to their stock row.
  * Blankets without a row yet carry `priorClosing` so the UI can show the
  * would-be opening figure before the row is created (see DB trigger
- * `set_opening_from_prior_month`, which enforces this server-side too).
+ * `set_opening_from_prior_day`, which enforces this server-side too).
  */
-export async function fetchMonthStock(month: string): Promise<MonthStockLine[]> {
+export async function fetchDayStock(date: string): Promise<DayStockLine[]> {
   const blankets = await fetchActiveBlanketsWithBrand();
 
   const { data: rows, error: sErr } = await supabase
-    .from("monthly_stock")
+    .from("daily_stock")
     .select("*")
-    .eq("month", month);
+    .eq("date", date);
   if (sErr) throw sErr;
   const byBlanket = new Map((rows ?? []).map((r) => [r.blanket_id, r]));
 
   const { data: priorRows, error: pErr } = await supabase
-    .from("monthly_stock")
-    .select("blanket_id, month, closing_stock")
-    .lt("month", month)
-    .order("month", { ascending: false });
+    .from("daily_stock")
+    .select("blanket_id, date, closing_stock")
+    .lt("date", date)
+    .order("date", { ascending: false });
   if (pErr) throw pErr;
   const priorClosingByBlanket = new Map<string, number>();
   for (const r of priorRows ?? []) {
@@ -71,40 +71,38 @@ export async function fetchMonthStock(month: string): Promise<MonthStockLine[]> 
 
 export type UpsertStockInput = {
   blanket_id: string;
-  month: string;
+  date: string;
   opening_stock: number;
   production: number;
   sales: number;
   notes?: string | null;
 };
 
-/** Insert or update a month's line for a blanket (closing_stock is generated). */
+/** Insert or update a day's line for a blanket (closing_stock is generated). */
 export async function upsertStock(input: UpsertStockInput): Promise<void> {
   const { error } = await supabase
-    .from("monthly_stock")
-    .upsert(input, { onConflict: "blanket_id,month" });
+    .from("daily_stock")
+    .upsert(input, { onConflict: "blanket_id,date" });
   if (error) throw error;
 }
 
-export async function setMonthLock(
-  month: string,
-  locked: boolean,
-): Promise<void> {
+/** Locks/unlocks every blanket's entry for a specific date. */
+export async function setDayLock(date: string, locked: boolean): Promise<void> {
   const { error } = await supabase
-    .from("monthly_stock")
+    .from("daily_stock")
     .update({ is_locked: locked })
-    .eq("month", month);
+    .eq("date", date);
   if (error) throw error;
 }
 
-/** Distinct months that already have stock data, newest first. */
-export async function fetchStockMonths(): Promise<string[]> {
+/** Distinct dates that already have stock data, newest first. */
+export async function fetchStockDates(): Promise<string[]> {
   const { data, error } = await supabase
-    .from("monthly_stock")
-    .select("month")
-    .order("month", { ascending: false });
+    .from("daily_stock")
+    .select("date")
+    .order("date", { ascending: false });
   if (error) throw error;
-  return [...new Set((data ?? []).map((r) => r.month))];
+  return [...new Set((data ?? []).map((r) => r.date))];
 }
 
 export async function fetchProductMonthlySummary(): Promise<
@@ -118,6 +116,26 @@ export async function fetchProductMonthlySummary(): Promise<
   return data;
 }
 
+/**
+ * Rollup views have no FK metadata for PostgREST to embed `blankets` in the
+ * same query, so blanket/brand names are fetched separately and joined here.
+ * (Every blanket, not just active ones — history for a deactivated blanket
+ * should still show up in reports.)
+ */
+async function fetchBlanketBrandMap() {
+  const { data, error } = await supabase.from("blankets").select("id, name, sku, products(name)");
+  if (error) throw error;
+  const map = new Map<string, { name: string; sku: string | null; brand_name: string }>();
+  for (const b of data ?? []) {
+    map.set(b.id, {
+      name: b.name,
+      sku: b.sku,
+      brand_name: (b.products as { name: string } | null)?.name ?? "—",
+    });
+  }
+  return map;
+}
+
 export type BlanketMonthlyRow = {
   blanket_id: string;
   blanket_name: string;
@@ -128,35 +146,83 @@ export type BlanketMonthlyRow = {
   production: number;
   sales: number;
   closing_stock: number;
-  is_locked: boolean;
+  days_recorded: number;
 };
 
-/** Full stock history across every active blanket, for consolidated/report views. */
-export async function fetchAllMonthlyStock(): Promise<BlanketMonthlyRow[]> {
-  const { data, error } = await supabase
-    .from("monthly_stock")
-    .select(
-      "month, opening_stock, production, sales, closing_stock, is_locked, blanket:blankets(id, name, sku, product_id, products(name))",
-    )
-    .order("month");
+/** Monthly rollup (sum of production/sales, first/last day's opening/closing) across every blanket. */
+export async function fetchMonthlyRollup(): Promise<BlanketMonthlyRow[]> {
+  const [{ data, error }, blankets] = await Promise.all([
+    supabase
+      .from("blanket_monthly_stock")
+      .select("blanket_id, month, opening_stock, production, sales, closing_stock, days_recorded")
+      .order("month"),
+    fetchBlanketBrandMap(),
+  ]);
   if (error) throw error;
 
   return (data ?? []).map((r) => {
-    const b = r.blanket as unknown as {
-      id: string; name: string; sku: string | null; product_id: string;
-      products: { name: string } | null;
-    };
+    const b = blankets.get(r.blanket_id!);
     return {
-      blanket_id: b.id,
-      blanket_name: b.name,
-      sku: b.sku,
-      brand_name: b.products?.name ?? "—",
-      month: r.month,
+      blanket_id: r.blanket_id!,
+      blanket_name: b?.name ?? "—",
+      sku: b?.sku ?? null,
+      brand_name: b?.brand_name ?? "—",
+      month: r.month!,
       opening_stock: Number(r.opening_stock ?? 0),
       production: Number(r.production ?? 0),
       sales: Number(r.sales ?? 0),
       closing_stock: Number(r.closing_stock ?? 0),
-      is_locked: r.is_locked,
+      days_recorded: Number(r.days_recorded ?? 0),
     };
   });
+}
+
+export type BlanketYearlyRow = {
+  blanket_id: string;
+  blanket_name: string;
+  sku: string | null;
+  brand_name: string;
+  year: string;
+  opening_stock: number;
+  production: number;
+  sales: number;
+  closing_stock: number;
+  days_recorded: number;
+};
+
+/** Yearly rollup (sum of production/sales, first/last day's opening/closing) across every blanket. */
+export async function fetchYearlyRollup(): Promise<BlanketYearlyRow[]> {
+  const [{ data, error }, blankets] = await Promise.all([
+    supabase
+      .from("blanket_yearly_stock")
+      .select("blanket_id, year, opening_stock, production, sales, closing_stock, days_recorded")
+      .order("year"),
+    fetchBlanketBrandMap(),
+  ]);
+  if (error) throw error;
+
+  return (data ?? []).map((r) => {
+    const b = blankets.get(r.blanket_id!);
+    return {
+      blanket_id: r.blanket_id!,
+      blanket_name: b?.name ?? "—",
+      sku: b?.sku ?? null,
+      brand_name: b?.brand_name ?? "—",
+      year: r.year!,
+      opening_stock: Number(r.opening_stock ?? 0),
+      production: Number(r.production ?? 0),
+      sales: Number(r.sales ?? 0),
+      closing_stock: Number(r.closing_stock ?? 0),
+      days_recorded: Number(r.days_recorded ?? 0),
+    };
+  });
+}
+
+/** Latest recorded closing stock per active blanket (for "current stock" widgets). */
+export async function fetchLatestStock(): Promise<Map<string, number>> {
+  const { data, error } = await supabase
+    .from("blanket_latest_stock")
+    .select("blanket_id, closing_stock");
+  if (error) throw error;
+  return new Map((data ?? []).map((r) => [r.blanket_id as string, Number(r.closing_stock ?? 0)]));
 }

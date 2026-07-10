@@ -1,8 +1,8 @@
 # Nile Overseas — Blanket Manufacturing Platform
 
 A production-ready platform for **Nile Overseas**, combining a premium public
-website with a full admin dashboard (catalogue, inventory, production tracking,
-monthly stock, sales reports and CMS) over a single Supabase backend.
+website with a full admin dashboard (catalogue, inventory, date-wise production
+tracking, sales reports and CMS) over a single Supabase backend.
 
 - **Public website** (`/`) — browse the DRJ and Cloud9 blanket ranges. No login.
 - **Admin dashboard** (`/admin`) — Supabase-authenticated staff manage everything
@@ -86,16 +86,19 @@ RLS is enabled on every table. The model:
 | products (brands)| read all                         | full |
 | blankets         | read where `is_active = true`    | full |
 | blanket_images   | read (only for active blankets)  | full |
-| monthly_stock    | none                             | full |
+| daily_stock      | none                             | full |
 | site_settings    | read                             | update |
 | storage objects  | read `blanket-images`            | write/delete |
 
 Server-side invariants (not trusted to the client):
 - **SKU** auto-generated per brand via trigger (`DRJ-001`, race-safe row lock).
 - **Closing stock** is a generated column: `opening + production − sales`.
-- **Locked months** — a trigger blocks edits to `opening/production/sales`.
+- **Opening stock carries forward day to day** via triggers, so monthly and
+  yearly totals are just rollups (`blanket_monthly_stock`, `blanket_yearly_stock`)
+  over a contiguous run of daily rows.
+- **Locked days** — a trigger blocks edits to `opening/production/sales`.
 - `updated_at` maintained by trigger; functions pinned `search_path`;
-  reporting view is `security_invoker`.
+  reporting views are `security_invoker`.
 
 ### Image upload workflow
 
@@ -154,7 +157,7 @@ Create more admins in Supabase Dashboard → Authentication → Add user.
 | Dashboard cards + recent activity | `src/admin/pages/DashboardPage.tsx` |
 | Products CRUD + activate/deactivate | `ProductsAdminPage`, `BlanketEditorPage` |
 | Image upload / primary / delete | `admin/components/ImageManager.tsx` |
-| Monthly stock + lock + brand totals | `MonthlyStockPage`, `StockRowEditor` |
+| Daily stock entry + lock + monthly/yearly rollups | `StockPage`, `StockRowEditor`, `StockRollupView` |
 | Reports + charts | `ReportsPage.tsx` |
 | CMS (settings) | `WebsiteSettingsPage.tsx` |
 ```

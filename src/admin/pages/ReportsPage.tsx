@@ -1,55 +1,69 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Legend, CartesianGrid,
 } from "recharts";
-import { useAllMonthlyStock } from "@/shared/hooks/useStock";
+import { useMonthlyRollup, useYearlyRollup } from "@/shared/hooks/useStock";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
 import { LoadingState, ErrorState, EmptyState } from "@/shared/components/StateViews";
-import { formatMonth, formatNumber } from "@/shared/utils/format";
+import { formatMonth, formatYear, formatNumber } from "@/shared/utils/format";
 import { downloadCsv, toCsv } from "@/shared/utils/csv";
 import { ReportKpiCard } from "../components/ReportKpiCard";
+import { cn } from "@/shared/utils/cn";
 
 const BRAND_COLORS = ["hsl(20 50% 22%)", "hsl(32 55% 52%)", "hsl(200 40% 45%)", "hsl(350 45% 50%)"];
 
+type Granularity = "month" | "year";
+
 export function ReportsPage() {
-  const { data: rows, isLoading, isError, error, refetch } = useAllMonthlyStock();
+  const [granularity, setGranularity] = useState<Granularity>("month");
+  const monthly = useMonthlyRollup();
+  const yearly = useYearlyRollup();
+  const active = granularity === "month" ? monthly : yearly;
+  const formatPeriod = granularity === "month" ? formatMonth : formatYear;
+
+  const rows = useMemo(() => {
+    if (granularity === "month") {
+      return (monthly.data ?? []).map((r) => ({ ...r, period: r.month }));
+    }
+    return (yearly.data ?? []).map((r) => ({ ...r, period: r.year }));
+  }, [granularity, monthly.data, yearly.data]);
 
   const analysis = useMemo(() => {
-    if (!rows || rows.length === 0) return null;
+    if (rows.length === 0) return null;
 
-    const months = [...new Set(rows.map((r) => r.month))].sort();
+    const periods = [...new Set(rows.map((r) => r.period))].sort();
     const brands = [...new Set(rows.map((r) => r.brand_name))];
 
-    const trend = months.map((month) => {
-      const monthRows = rows.filter((r) => r.month === month);
+    const trend = periods.map((period) => {
+      const periodRows = rows.filter((r) => r.period === period);
       return {
-        month: formatMonth(month),
-        production: monthRows.reduce((s, r) => s + r.production, 0),
-        sales: monthRows.reduce((s, r) => s + r.sales, 0),
+        period: formatPeriod(period),
+        production: periodRows.reduce((s, r) => s + r.production, 0),
+        sales: periodRows.reduce((s, r) => s + r.sales, 0),
       };
     });
 
-    const recentMonths = months.slice(-6);
-    const brandTrend = recentMonths.map((month) => {
-      const entry: Record<string, string | number> = { month: formatMonth(month) };
+    const recentPeriods = periods.slice(-6);
+    const brandTrend = recentPeriods.map((period) => {
+      const entry: Record<string, string | number> = { period: formatPeriod(period) };
       for (const brand of brands) {
         entry[brand] = rows
-          .filter((r) => r.month === month && r.brand_name === brand)
+          .filter((r) => r.period === period && r.brand_name === brand)
           .reduce((s, r) => s + r.sales, 0);
       }
       return entry;
     });
 
-    const lastMonth = months[months.length - 1];
-    const prevMonth = months.length > 1 ? months[months.length - 2] : null;
-    const sumFor = (month: string | null, key: "production" | "sales" | "closing_stock") =>
-      month === null ? null : rows.filter((r) => r.month === month).reduce((s, r) => s + r[key], 0);
+    const lastPeriod = periods[periods.length - 1];
+    const prevPeriod = periods.length > 1 ? periods[periods.length - 2] : null;
+    const sumFor = (period: string | null, key: "production" | "sales" | "closing_stock") =>
+      period === null ? null : rows.filter((r) => r.period === period).reduce((s, r) => s + r[key], 0);
 
     const byBlanket = new Map<string, { name: string; sku: string | null; brand: string; production: number; sales: number }>();
     for (const r of rows) {
@@ -64,25 +78,25 @@ export function ReportsPage() {
       .slice(0, 8);
 
     return {
-      months, brands, trend, brandTrend,
+      brands, trend, brandTrend,
       kpis: {
-        production: { value: sumFor(lastMonth, "production") ?? 0, prev: sumFor(prevMonth, "production") },
-        sales: { value: sumFor(lastMonth, "sales") ?? 0, prev: sumFor(prevMonth, "sales") },
-        closing: { value: sumFor(lastMonth, "closing_stock") ?? 0, prev: sumFor(prevMonth, "closing_stock") },
+        production: { value: sumFor(lastPeriod, "production") ?? 0, prev: sumFor(prevPeriod, "production") },
+        sales: { value: sumFor(lastPeriod, "sales") ?? 0, prev: sumFor(prevPeriod, "sales") },
+        closing: { value: sumFor(lastPeriod, "closing_stock") ?? 0, prev: sumFor(prevPeriod, "closing_stock") },
       },
       topProducts,
-      lastMonthLabel: lastMonth ? formatMonth(lastMonth) : "",
+      lastPeriodLabel: lastPeriod ? formatPeriod(lastPeriod) : "",
     };
-  }, [rows]);
+  }, [rows, formatPeriod]);
 
   const handleExport = () => {
-    if (!rows) return;
-    const headers = ["Month", "Brand", "Blanket", "SKU", "Opening", "Production", "Sales", "Closing"];
+    if (rows.length === 0) return;
+    const headers = [granularity === "month" ? "Month" : "Year", "Brand", "Blanket", "SKU", "Opening", "Production", "Sales", "Closing"];
     const csvRows = rows.map((r) => [
-      formatMonth(r.month), r.brand_name, r.blanket_name, r.sku,
+      formatPeriod(r.period), r.brand_name, r.blanket_name, r.sku,
       r.opening_stock, r.production, r.sales, r.closing_stock,
     ]);
-    downloadCsv("nile-overseas-full-report.csv", toCsv(headers, csvRows));
+    downloadCsv(`nile-overseas-${granularity}ly-report.csv`, toCsv(headers, csvRows));
   };
 
   return (
@@ -92,39 +106,63 @@ export function ReportsPage() {
           <h1 className="font-serif text-3xl font-bold text-primary">Reports</h1>
           <p className="text-muted-foreground">Production, sales and stock trends across every brand.</p>
         </div>
-        <Button variant="outline" onClick={handleExport} disabled={!rows?.length}>
-          <Download className="h-4 w-4" /> Export full report (CSV)
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-md border p-0.5">
+            <button
+              type="button"
+              onClick={() => setGranularity("month")}
+              className={cn(
+                "rounded px-3 py-1 text-sm font-medium transition",
+                granularity === "month" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
+              )}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              onClick={() => setGranularity("year")}
+              className={cn(
+                "rounded px-3 py-1 text-sm font-medium transition",
+                granularity === "year" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
+              )}
+            >
+              Yearly
+            </button>
+          </div>
+          <Button variant="outline" onClick={handleExport} disabled={rows.length === 0}>
+            <Download className="h-4 w-4" /> Export report (CSV)
+          </Button>
+        </div>
       </div>
 
-      {isLoading ? (
+      {active.isLoading ? (
         <LoadingState />
-      ) : isError ? (
-        <ErrorState error={error} onRetry={refetch} />
+      ) : active.isError ? (
+        <ErrorState error={active.error} onRetry={active.refetch} />
       ) : !analysis ? (
         <EmptyState
           title="No stock data yet"
-          description="Enter monthly stock to see reports and charts here."
+          description="Enter daily stock to see reports and charts here."
         />
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-3">
-            <ReportKpiCard label={`Production — ${analysis.lastMonthLabel}`} value={analysis.kpis.production.value} previous={analysis.kpis.production.prev} />
-            <ReportKpiCard label={`Sales — ${analysis.lastMonthLabel}`} value={analysis.kpis.sales.value} previous={analysis.kpis.sales.prev} />
-            <ReportKpiCard label={`Closing stock — ${analysis.lastMonthLabel}`} value={analysis.kpis.closing.value} previous={analysis.kpis.closing.prev} />
+            <ReportKpiCard label={`Production — ${analysis.lastPeriodLabel}`} value={analysis.kpis.production.value} previous={analysis.kpis.production.prev} />
+            <ReportKpiCard label={`Sales — ${analysis.lastPeriodLabel}`} value={analysis.kpis.sales.value} previous={analysis.kpis.sales.prev} />
+            <ReportKpiCard label={`Closing stock — ${analysis.lastPeriodLabel}`} value={analysis.kpis.closing.value} previous={analysis.kpis.closing.prev} />
           </div>
 
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Production vs Sales trend</CardTitle>
-              <CardDescription>All brands combined, across every recorded month.</CardDescription>
+              <CardDescription>All brands combined, across every recorded {granularity}.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={analysis.trend}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="month" fontSize={12} />
+                    <XAxis dataKey="period" fontSize={12} />
                     <YAxis fontSize={12} />
                     <Tooltip />
                     <Legend />
@@ -139,14 +177,16 @@ export function ReportsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Sales by brand</CardTitle>
-              <CardDescription>Last {analysis.brandTrend.length} months, side by side.</CardDescription>
+              <CardDescription>
+                Last {analysis.brandTrend.length} {granularity === "month" ? "months" : "years"}, side by side.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={analysis.brandTrend}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="month" fontSize={12} />
+                    <XAxis dataKey="period" fontSize={12} />
                     <YAxis fontSize={12} />
                     <Tooltip />
                     <Legend />
