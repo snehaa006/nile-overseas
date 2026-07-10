@@ -36,12 +36,13 @@ export function StockRowEditor({
   line,
   values,
   onChange,
-  locked,
+  editing,
 }: {
   line: DayStockLine;
   values: RowValues;
   onChange: (field: "opening" | "production" | "sales", value: string) => void;
-  locked: boolean;
+  /** Edit mode is toggled page-wide; outside of it every cell renders as plain table text. */
+  editing: boolean;
 }) {
   const openingIsEditable = isOpeningEditable(line);
   const openingValue = openingIsEditable ? Number(values.opening || 0) : Number(values.opening);
@@ -56,44 +57,51 @@ export function StockRowEditor({
           &middot; {formatWeight(line.weight_kg)}
         </span>
       </TableCell>
-      <TableCell>
-        {openingIsEditable ? (
+      <TableCell className="text-right">
+        {editing && openingIsEditable ? (
           <Input
             type="number"
             value={values.opening}
-            disabled={locked}
             onChange={(e) => onChange("opening", e.target.value)}
-            className="h-9 w-24"
+            className="ml-auto h-9 w-24 text-right"
           />
+        ) : openingIsEditable ? (
+          <span className="tabular-nums">{formatNumber(openingValue)}</span>
         ) : (
           <span
             title="Carried forward from the previous day's closing stock"
-            className="inline-flex h-9 w-24 items-center gap-1 rounded-md border border-dashed bg-muted/40 px-3 text-sm text-muted-foreground"
+            className="inline-flex h-9 items-center gap-1 rounded-md border border-dashed bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground"
           >
             <ArrowDownToLine className="h-3 w-3 shrink-0" />
             {formatNumber(openingValue)}
           </span>
         )}
       </TableCell>
-      <TableCell>
-        <Input
-          type="number"
-          value={values.production}
-          disabled={locked}
-          onChange={(e) => onChange("production", e.target.value)}
-          className="h-9 w-24"
-        />
+      <TableCell className="text-right">
+        {editing ? (
+          <Input
+            type="number"
+            value={values.production}
+            onChange={(e) => onChange("production", e.target.value)}
+            className="ml-auto h-9 w-24 text-right"
+          />
+        ) : (
+          <span className="tabular-nums">{formatNumber(Number(values.production || 0))}</span>
+        )}
       </TableCell>
-      <TableCell>
-        <Input
-          type="number"
-          value={values.sales}
-          disabled={locked}
-          onChange={(e) => onChange("sales", e.target.value)}
-          className="h-9 w-24"
-        />
+      <TableCell className="text-right">
+        {editing ? (
+          <Input
+            type="number"
+            value={values.sales}
+            onChange={(e) => onChange("sales", e.target.value)}
+            className="ml-auto h-9 w-24 text-right"
+          />
+        ) : (
+          <span className="tabular-nums">{formatNumber(Number(values.sales || 0))}</span>
+        )}
       </TableCell>
-      <TableCell className="font-semibold">{formatNumber(closing)}</TableCell>
+      <TableCell className="text-right font-semibold tabular-nums">{formatNumber(closing)}</TableCell>
     </TableRow>
   );
 }

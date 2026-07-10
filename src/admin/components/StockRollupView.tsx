@@ -96,12 +96,12 @@ export function StockRollupView({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Period</TableHead>
-                  <TableHead>Blanket</TableHead>
-                  <TableHead className="text-right">Opening</TableHead>
-                  <TableHead className="text-right">Production</TableHead>
-                  <TableHead className="text-right">Sales</TableHead>
-                  <TableHead className="text-right">Closing</TableHead>
+                  <TableHead className="font-bold text-foreground">Period</TableHead>
+                  <TableHead className="font-bold text-foreground">Blanket</TableHead>
+                  <TableHead className="text-right font-bold text-foreground">Opening</TableHead>
+                  <TableHead className="text-right font-bold text-foreground">Production</TableHead>
+                  <TableHead className="text-right font-bold text-foreground">Sales</TableHead>
+                  <TableHead className="text-right font-bold text-foreground">Closing</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
