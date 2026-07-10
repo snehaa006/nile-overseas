@@ -1,12 +1,29 @@
-import type { Tables } from "./database";
+import type { Tables, Views } from "./database";
 
 // Domain aliases: in this business a `product` row IS a brand (DRJ / Cloud9),
 // and a `blanket` is the sellable item. We name the app-facing types accordingly.
 export type Brand = Tables<"products">;
 export type Blanket = Tables<"blankets">;
 export type BlanketImage = Tables<"blanket_images">;
-export type MonthlyStock = Tables<"monthly_stock">;
+export type DailyStock = Tables<"daily_stock">;
+export type ProcessEntry = Tables<"process_entries">;
+export type Agent = Tables<"agents">;
+export type Customer = Tables<"customers">;
+export type Client = Tables<"clients">;
+export type ProductionEntry = Tables<"production_entries">;
 export type SiteSettings = Tables<"site_settings">;
+
+/** The four fixed manufacturing processes tracked in the Process tab. */
+export const PROCESSES = ["raschal", "polish", "printing", "brushing"] as const;
+export type Process = (typeof PROCESSES)[number];
+export const PROCESS_LABELS: Record<Process, string> = {
+  raschal: "Raschal",
+  polish: "Polish",
+  printing: "Printing",
+  brushing: "Brushing",
+};
+export type BlanketMonthlyStock = Views<"blanket_monthly_stock">;
+export type BlanketYearlyStock = Views<"blanket_yearly_stock">;
 
 /** A blanket with its images joined in. */
 export type BlanketWithImages = Blanket & {
@@ -24,8 +41,8 @@ export type BrandWithBlankets = Brand & {
   blankets: BlanketWithImages[];
 };
 
-/** A monthly_stock row joined with the blanket + brand it belongs to. */
-export type StockRow = MonthlyStock & {
+/** A daily_stock row joined with the blanket + brand it belongs to. */
+export type StockRow = DailyStock & {
   blanket: Pick<Blanket, "id" | "name" | "sku" | "product_id">;
 };
 

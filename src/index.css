@@ -4,24 +4,27 @@
 
 @layer base {
   :root {
-    --background: 40 33% 98%;
-    --foreground: 24 10% 12%;
+    /* Midnight / Pearl Perfect / Noir / Ocean palette on a white base. */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 5%;
     --card: 0 0% 100%;
-    --card-foreground: 24 10% 12%;
-    --primary: 20 50% 22%;
-    --primary-foreground: 40 33% 98%;
-    --secondary: 33 30% 92%;
-    --secondary-foreground: 24 10% 20%;
-    --muted: 33 20% 94%;
-    --muted-foreground: 24 6% 45%;
-    --accent: 32 55% 52%;
+    --card-foreground: 0 0% 5%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 5%;
+    --primary: 219 56% 19%;
+    --primary-foreground: 47 52% 91%;
+    --secondary: 211 30% 96%;
+    --secondary-foreground: 219 56% 19%;
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 10% 40%;
+    --accent: 211 32% 57%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
-    --border: 30 15% 88%;
-    --input: 30 15% 85%;
-    --ring: 32 55% 52%;
-    --radius: 0.6rem;
+    --border: 220 15% 88%;
+    --input: 220 15% 85%;
+    --ring: 211 32% 57%;
+    --radius: 0.75rem;
   }
 
   * {
@@ -34,10 +37,31 @@
   h1, h2, h3 {
     @apply font-serif;
   }
+
+  /* Hide native number-input spin buttons app-wide; inputs get their own affordances. */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Scrapbook tilt for the clients timeline — rotation set per card via the
+     --rot variable; :hover straightens it (a pseudo-class rule outranks the
+     base class, so the hover state wins). */
+  .tl-card {
+    transform: rotate(var(--rot, 0deg));
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .tl-card:hover {
+    transform: rotate(0deg);
   }
 }

@@ -16,6 +16,7 @@ export type Database = {
           created_at: string;
           description: string | null;
           id: string;
+          logo_url: string | null;
           name: string;
           next_sku_number: number;
           sku_prefix: string;
@@ -25,12 +26,31 @@ export type Database = {
           created_at?: string;
           description?: string | null;
           id?: string;
+          logo_url?: string | null;
           name: string;
           next_sku_number?: number;
           sku_prefix: string;
           slug: string;
         };
         Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
+        Relationships: [];
+      };
+      clients: {
+        Row: {
+          created_at: string;
+          display_order: number;
+          id: string;
+          image_url: string | null;
+          name: string;
+        };
+        Insert: {
+          created_at?: string;
+          display_order?: number;
+          id?: string;
+          image_url?: string | null;
+          name: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["clients"]["Insert"]>;
         Relationships: [];
       };
       blankets: {
@@ -97,14 +117,14 @@ export type Database = {
           },
         ];
       };
-      monthly_stock: {
+      daily_stock: {
         Row: {
           blanket_id: string;
           closing_stock: number | null;
           created_at: string;
+          date: string;
           id: string;
           is_locked: boolean;
-          month: string;
           notes: string | null;
           opening_stock: number;
           production: number;
@@ -115,22 +135,119 @@ export type Database = {
           blanket_id: string;
           closing_stock?: number | null;
           created_at?: string;
+          date: string;
           id?: string;
           is_locked?: boolean;
-          month: string;
           notes?: string | null;
           opening_stock?: number;
           production?: number;
           sales?: number;
           updated_at?: string;
         };
-        Update: Partial<Database["public"]["Tables"]["monthly_stock"]["Insert"]>;
+        Update: Partial<Database["public"]["Tables"]["daily_stock"]["Insert"]>;
         Relationships: [
           {
-            foreignKeyName: "monthly_stock_blanket_id_fkey";
+            foreignKeyName: "daily_stock_blanket_id_fkey";
             columns: ["blanket_id"];
             isOneToOne: false;
             referencedRelation: "blankets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      process_entries: {
+        Row: {
+          blanket_id: string | null;
+          created_at: string;
+          date: string;
+          id: string;
+          kg: number;
+          process: string;
+          roll: number;
+          updated_at: string;
+        };
+        Insert: {
+          blanket_id?: string | null;
+          created_at?: string;
+          date: string;
+          id?: string;
+          kg?: number;
+          process: string;
+          roll?: number;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["process_entries"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "process_entries_blanket_id_fkey";
+            columns: ["blanket_id"];
+            isOneToOne: false;
+            referencedRelation: "blankets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      agents: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["agents"]["Insert"]>;
+        Relationships: [];
+      };
+      customers: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["customers"]["Insert"]>;
+        Relationships: [];
+      };
+      production_entries: {
+        Row: {
+          agent_id: string | null;
+          amount: number;
+          created_at: string;
+          customer_id: string | null;
+          date: string;
+          id: string;
+          updated_at: string;
+        };
+        Insert: {
+          agent_id?: string | null;
+          amount?: number;
+          created_at?: string;
+          customer_id?: string | null;
+          date: string;
+          id?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["production_entries"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "production_entries_agent_id_fkey";
+            columns: ["agent_id"];
+            isOneToOne: false;
+            referencedRelation: "agents";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "production_entries_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
             referencedColumns: ["id"];
           },
         ];
@@ -141,7 +258,9 @@ export type Database = {
           address: string | null;
           company_name: string;
           email: string | null;
+          established_year: number;
           id: number;
+          logo_url: string | null;
           map_link: string | null;
           phone: string | null;
           updated_at: string;
@@ -152,7 +271,9 @@ export type Database = {
           address?: string | null;
           company_name?: string;
           email?: string | null;
+          established_year?: number;
           id?: number;
+          logo_url?: string | null;
           map_link?: string | null;
           phone?: string | null;
           updated_at?: string;
@@ -163,6 +284,38 @@ export type Database = {
       };
     };
     Views: {
+      blanket_monthly_stock: {
+        Row: {
+          blanket_id: string | null;
+          closing_stock: number | null;
+          days_recorded: number | null;
+          month: string | null;
+          opening_stock: number | null;
+          production: number | null;
+          sales: number | null;
+        };
+        Relationships: [];
+      };
+      blanket_yearly_stock: {
+        Row: {
+          blanket_id: string | null;
+          closing_stock: number | null;
+          days_recorded: number | null;
+          opening_stock: number | null;
+          production: number | null;
+          sales: number | null;
+          year: string | null;
+        };
+        Relationships: [];
+      };
+      blanket_latest_stock: {
+        Row: {
+          blanket_id: string | null;
+          closing_stock: number | null;
+          date: string | null;
+        };
+        Relationships: [];
+      };
       product_monthly_summary: {
         Row: {
           month: string | null;
@@ -171,6 +324,73 @@ export type Database = {
           total_production: number | null;
           total_sales: number | null;
           total_stock: number | null;
+        };
+        Relationships: [];
+      };
+      product_yearly_summary: {
+        Row: {
+          product_id: string | null;
+          product_name: string | null;
+          total_production: number | null;
+          total_sales: number | null;
+          total_stock: number | null;
+          year: string | null;
+        };
+        Relationships: [];
+      };
+      process_monthly_totals: {
+        Row: {
+          process: string | null;
+          month: string | null;
+          roll: number | null;
+          kg: number | null;
+          entries: number | null;
+        };
+        Relationships: [];
+      };
+      process_yearly_totals: {
+        Row: {
+          process: string | null;
+          year: string | null;
+          roll: number | null;
+          kg: number | null;
+          entries: number | null;
+        };
+        Relationships: [];
+      };
+      production_agent_monthly: {
+        Row: {
+          agent_id: string | null;
+          month: string | null;
+          amount: number | null;
+          entries: number | null;
+        };
+        Relationships: [];
+      };
+      production_customer_monthly: {
+        Row: {
+          customer_id: string | null;
+          month: string | null;
+          amount: number | null;
+          entries: number | null;
+        };
+        Relationships: [];
+      };
+      production_agent_yearly: {
+        Row: {
+          agent_id: string | null;
+          year: string | null;
+          amount: number | null;
+          entries: number | null;
+        };
+        Relationships: [];
+      };
+      production_customer_yearly: {
+        Row: {
+          customer_id: string | null;
+          year: string | null;
+          amount: number | null;
+          entries: number | null;
         };
         Relationships: [];
       };

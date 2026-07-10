@@ -10,11 +10,17 @@ export function Footer() {
     <footer className="mt-20 border-t bg-primary text-primary-foreground">
       <div className="container grid gap-8 py-12 md:grid-cols-3">
         <div>
-          <h3 className="font-serif text-xl font-bold">
-            {s?.company_name ?? "Nile Overseas"}
-          </h3>
+          <div className="flex items-center gap-2.5">
+            {s?.logo_url && (
+              <img src={s.logo_url} alt="" className="h-9 w-9 object-contain" />
+            )}
+            <h3 className="font-serif text-xl font-bold">
+              {s?.company_name ?? "Nile Overseas"}
+            </h3>
+          </div>
           <p className="mt-3 max-w-xs text-sm text-primary-foreground/70">
-            Premium blanket manufacturing — home of the DRJ and Cloud9 ranges.
+            Premium blanket manufacturing — home of the CloudNine and Paris Royale DRJ ranges,
+            crafting comfort since {s?.established_year ?? 2014}.
           </p>
         </div>
 

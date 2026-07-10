@@ -3,7 +3,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { ErrorState, EmptyState } from "@/shared/components/StateViews";
 import { Reveal } from "@/shared/components/Reveal";
 import { BlanketCard } from "../components/BlanketCard";
-import { brandLogo } from "../lib/brandLogos";
+import { brandLogo, brandSlug } from "../lib/brandLogos";
 
 export function ProductsPage() {
   const { data: brands, isLoading, isError, error, refetch } = useCatalogue();
@@ -15,7 +15,7 @@ export function ProductsPage() {
           Our Blankets
         </h1>
         <p className="mt-3 text-muted-foreground">
-          Browse our full range across the DRJ and Cloud9 collections.
+          Browse our full range across the CloudNine and Paris Royale DRJ collections.
         </p>
       </div>
 
@@ -40,13 +40,13 @@ export function ProductsPage() {
         brand.blankets.length === 0 ? null : (
           <section
             key={brand.id}
-            id={brand.name.toLowerCase()}
+            id={brandSlug(brand.name)}
             className="mb-16 scroll-mt-20"
           >
             <div className="mb-6 flex items-center gap-4">
-              {brandLogo(brand.name) && (
+              {brandLogo(brand.name, brand.logo_url) && (
                 <img
-                  src={brandLogo(brand.name)}
+                  src={brandLogo(brand.name, brand.logo_url)}
                   alt={`${brand.name} logo`}
                   className="h-14 w-auto object-contain"
                   loading="lazy"

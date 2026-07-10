@@ -40,6 +40,18 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        // Raw brand palette for gradients, blobs and decorative accents —
+        // independent of the semantic tokens above.
+        brand: {
+          midnight: "#16294D",
+          pearl: "#F4EFDC",
+          noir: "#0D0D0D",
+          ocean: "#7091B5",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

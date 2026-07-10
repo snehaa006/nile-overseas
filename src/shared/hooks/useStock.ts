@@ -5,28 +5,38 @@ import {
 } from "@tanstack/react-query";
 import { qk } from "@/shared/lib/queryClient";
 import {
-  fetchAllMonthlyStock,
-  fetchMonthStock,
+  fetchDayStock,
+  fetchLatestStock,
+  fetchMonthlyRollup,
   fetchProductMonthlySummary,
-  fetchStockMonths,
-  setMonthLock,
+  fetchStockDates,
+  fetchYearlyRollup,
+  setDayLock,
   upsertStock,
   type UpsertStockInput,
 } from "@/shared/api/stock";
 
-export function useMonthStock(month: string) {
+export function useDayStock(date: string) {
   return useQuery({
-    queryKey: qk.stock(month),
-    queryFn: () => fetchMonthStock(month),
+    queryKey: qk.dayStock(date),
+    queryFn: () => fetchDayStock(date),
   });
 }
 
-export function useStockMonths() {
-  return useQuery({ queryKey: qk.stockMonths, queryFn: fetchStockMonths });
+export function useStockDates() {
+  return useQuery({ queryKey: qk.stockDates, queryFn: fetchStockDates });
 }
 
-export function useAllMonthlyStock() {
-  return useQuery({ queryKey: qk.allStock, queryFn: fetchAllMonthlyStock });
+export function useMonthlyRollup() {
+  return useQuery({ queryKey: qk.monthlyRollup, queryFn: fetchMonthlyRollup });
+}
+
+export function useYearlyRollup() {
+  return useQuery({ queryKey: qk.yearlyRollup, queryFn: fetchYearlyRollup });
+}
+
+export function useLatestStock() {
+  return useQuery({ queryKey: qk.latestStock, queryFn: fetchLatestStock });
 }
 
 export function useProductMonthlySummary() {
@@ -36,27 +46,30 @@ export function useProductMonthlySummary() {
   });
 }
 
-export function useUpsertStock(month: string) {
+export function useUpsertStock(date: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: UpsertStockInput) => upsertStock(input),
+    mutationFn: (input: UpsertStockInput | UpsertStockInput[]) => upsertStock(input),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.stock(month) });
-      qc.invalidateQueries({ queryKey: qk.stockMonths });
-      qc.invalidateQueries({ queryKey: qk.allStock });
+      qc.invalidateQueries({ queryKey: qk.dayStock(date) });
+      qc.invalidateQueries({ queryKey: qk.stockDates });
+      qc.invalidateQueries({ queryKey: qk.monthlyRollup });
+      qc.invalidateQueries({ queryKey: qk.yearlyRollup });
+      qc.invalidateQueries({ queryKey: qk.latestStock });
       qc.invalidateQueries({ queryKey: qk.reportSummary });
       qc.invalidateQueries({ queryKey: qk.dashboard });
     },
   });
 }
 
-export function useToggleMonthLock(month: string) {
+export function useToggleDayLock(date: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (locked: boolean) => setMonthLock(month, locked),
+    mutationFn: (locked: boolean) => setDayLock(date, locked),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.stock(month) });
-      qc.invalidateQueries({ queryKey: qk.allStock });
+      qc.invalidateQueries({ queryKey: qk.dayStock(date) });
+      qc.invalidateQueries({ queryKey: qk.monthlyRollup });
+      qc.invalidateQueries({ queryKey: qk.yearlyRollup });
     },
   });
 }

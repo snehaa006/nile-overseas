@@ -3,28 +3,39 @@ import {
   LayoutDashboard,
   Package,
   Boxes,
+  Factory,
+  Truck,
   Settings,
   BarChart3,
+  Building2,
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { useSettings } from "@/shared/hooks/useSettings";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/shared/components/ui/button";
 
 const items = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/products", label: "Products", icon: Package, end: false },
-  { to: "/admin/stock", label: "Monthly Stock", icon: Boxes, end: false },
+  { to: "/admin/clients", label: "Clients", icon: Building2, end: false },
+  { to: "/admin/stock", label: "Stock", icon: Boxes, end: false },
+  { to: "/admin/process", label: "Process", icon: Factory, end: false },
+  { to: "/admin/production", label: "Production", icon: Truck, end: false },
   { to: "/admin/reports", label: "Reports", icon: BarChart3, end: false },
   { to: "/admin/settings", label: "Website Settings", icon: Settings, end: false },
 ];
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { signOut, session } = useAuth();
+  const { data: settings } = useSettings();
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center border-b px-6">
+      <div className="flex h-16 items-center gap-2.5 border-b px-6">
+        {settings?.logo_url && (
+          <img src={settings.logo_url} alt="" className="h-8 w-8 object-contain" />
+        )}
         <span className="font-serif text-lg font-bold text-primary">
           Nile Overseas
         </span>

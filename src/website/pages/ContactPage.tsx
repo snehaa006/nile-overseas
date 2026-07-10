@@ -24,7 +24,8 @@ export function ContactPage() {
       <div className="animate-fade-in-up text-center">
         <h1 className="font-serif text-4xl font-bold text-primary">Get in Touch</h1>
         <p className="mt-3 text-muted-foreground">
-          We'd love to hear from you. Reach out for orders, pricing or partnership enquiries.
+          We'd love to hear from you. Reach out for orders, pricing or partnership enquiries
+          — crafting blankets since {s?.established_year ?? 2014}.
         </p>
       </div>
 
