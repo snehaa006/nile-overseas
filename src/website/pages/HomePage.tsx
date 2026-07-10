@@ -7,6 +7,8 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { BlanketCard } from "../components/BlanketCard";
 import { BrandCard } from "../components/BrandCard";
 import { FeaturedCarousel } from "../components/FeaturedCarousel";
+import { ClientsTimeline } from "../components/ClientsTimeline";
+import { useClients } from "@/shared/hooks/useClients";
 import { Reveal } from "@/shared/components/Reveal";
 import type { BlanketWithImages } from "@/shared/types/models";
 
@@ -43,6 +45,7 @@ const FEATURES = [
 export function HomePage() {
   const { data: brands, isLoading } = useCatalogue();
   const { data: settings } = useSettings();
+  const { data: clients } = useClients();
 
   const allBlankets: { blanket: BlanketWithImages; brand: string }[] =
     (brands ?? []).flatMap((b) =>
@@ -201,6 +204,9 @@ export function HomePage() {
           <p className="text-muted-foreground">Products coming soon.</p>
         )}
       </section>
+
+      {/* Clients timeline */}
+      <ClientsTimeline clients={clients ?? []} />
 
       {/* CTA banner */}
       <Reveal as="section" className="container pb-20">
