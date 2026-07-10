@@ -281,6 +281,7 @@ export type Database = {
           company_name: string;
           email: string | null;
           established_year: number;
+          hero_image_url: string | null;
           id: number;
           logo_url: string | null;
           map_link: string | null;
@@ -294,6 +295,7 @@ export type Database = {
           company_name?: string;
           email?: string | null;
           established_year?: number;
+          hero_image_url?: string | null;
           id?: number;
           logo_url?: string | null;
           map_link?: string | null;
