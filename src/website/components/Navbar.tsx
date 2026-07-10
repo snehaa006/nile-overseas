@@ -7,6 +7,7 @@ import { cn } from "@/shared/utils/cn";
 const links = [
   { to: "/", label: "Home" },
   { to: "/products", label: "Products" },
+  { to: "/processes", label: "Processes" },
   { to: "/about", label: "About" },
   { to: "/contact", label: "Contact" },
 ];

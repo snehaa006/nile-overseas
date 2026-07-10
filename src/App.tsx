@@ -3,6 +3,7 @@ import { WebsiteLayout } from "@/website/WebsiteLayout";
 import { HomePage } from "@/website/pages/HomePage";
 import { AboutPage } from "@/website/pages/AboutPage";
 import { ProductsPage } from "@/website/pages/ProductsPage";
+import { ProcessesPage } from "@/website/pages/ProcessesPage";
 import { BlanketDetailPage } from "@/website/pages/BlanketDetailPage";
 import { ContactPage } from "@/website/pages/ContactPage";
 
@@ -27,6 +28,7 @@ export function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/products" element={<ProductsPage />} />
+        <Route path="/processes" element={<ProcessesPage />} />
         <Route path="/products/:sku" element={<BlanketDetailPage />} />
         <Route path="/contact" element={<ContactPage />} />
       </Route>
