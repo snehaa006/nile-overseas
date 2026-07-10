@@ -6,22 +6,22 @@ import { Button } from "@/shared/components/ui/button";
 import { TableCell, TableRow } from "@/shared/components/ui/table";
 import { Spinner } from "@/shared/components/StateViews";
 import { formatNumber } from "@/shared/utils/format";
-import type { MonthStockLine } from "@/shared/api/stock";
+import type { DayStockLine } from "@/shared/api/stock";
 import { useUpsertStock } from "@/shared/hooks/useStock";
 
 export function StockRowEditor({
   line,
-  month,
+  date,
   locked,
 }: {
-  line: MonthStockLine;
-  month: string;
+  line: DayStockLine;
+  date: string;
   locked: boolean;
 }) {
-  const upsert = useUpsertStock(month);
+  const upsert = useUpsertStock(date);
 
   // Opening is fixed once a row exists (set by the DB trigger from the prior
-  // month's closing stock). Before the row exists, we show the carried-
+  // day's closing stock). Before the row exists, we show the carried-
   // forward figure read-only too — it's exactly what will be saved.
   const rowExists = Boolean(line.stock);
   const openingValue = rowExists
@@ -51,7 +51,7 @@ export function StockRowEditor({
     try {
       await upsert.mutateAsync({
         blanket_id: line.blanket_id,
-        month,
+        date,
         opening_stock: opening,
         production: Number(production || 0),
         sales: Number(sales || 0),
@@ -79,7 +79,7 @@ export function StockRowEditor({
           />
         ) : (
           <span
-            title="Carried forward from the previous month's closing stock"
+            title="Carried forward from the previous day's closing stock"
             className="inline-flex h-9 w-24 items-center gap-1 rounded-md border border-dashed bg-muted/40 px-3 text-sm text-muted-foreground"
           >
             <ArrowDownToLine className="h-3 w-3 shrink-0" />

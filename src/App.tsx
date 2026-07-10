@@ -12,7 +12,7 @@ import { AdminLayout } from "@/admin/AdminLayout";
 import { DashboardPage } from "@/admin/pages/DashboardPage";
 import { ProductsAdminPage } from "@/admin/pages/ProductsAdminPage";
 import { BlanketEditorPage } from "@/admin/pages/BlanketEditorPage";
-import { MonthlyStockPage } from "@/admin/pages/MonthlyStockPage";
+import { StockPage } from "@/admin/pages/StockPage";
 import { WebsiteSettingsPage } from "@/admin/pages/WebsiteSettingsPage";
 import { ReportsPage } from "@/admin/pages/ReportsPage";
 
@@ -42,7 +42,7 @@ export function App() {
         <Route path="products" element={<ProductsAdminPage />} />
         <Route path="products/new" element={<BlanketEditorPage />} />
         <Route path="products/:id" element={<BlanketEditorPage />} />
-        <Route path="stock" element={<MonthlyStockPage />} />
+        <Route path="stock" element={<StockPage />} />
         <Route path="settings" element={<WebsiteSettingsPage />} />
         <Route path="reports" element={<ReportsPage />} />
       </Route>
