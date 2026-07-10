@@ -219,7 +219,7 @@ export function HomePage() {
       <ClientsTimeline clients={clients ?? []} />
 
       {/* CTA banner */}
-      <Reveal as="section" className="container pb-20">
+      <Reveal as="section" className="container pt-16 pb-20">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-midnight to-brand-noir px-8 py-14 text-center text-white shadow-lg sm:px-16">
           <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand-ocean/20 blur-3xl" />
           <h2 className="relative font-serif text-3xl font-bold text-balance">
