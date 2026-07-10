@@ -17,10 +17,10 @@ type Step = {
    look of the reference infographic. */
 const ROAD_WHITE = "#FFFFFF";
 const DASH_GREY = "#9CA3AF";
-const BADGE_DARK = "#1E293B";
+const BADGE_DARK = "#16294D"; // brand midnight navy
 
 const VB_W = 600;
-const VB_H = 1320;
+const VB_H = 1520;
 
 /* Lanes the road switches between, and the mid-points where it jogs across. */
 const LANE_R = 440;
@@ -39,7 +39,7 @@ const STEPS: Step[] = [
       "Premium yarn is knitted on high-gauge Raschel machines, forming the dense, plush base fabric.",
     icon: Eye,
     x: LANE_R,
-    y: 200,
+    y: 210,
   },
   {
     title: "Polish",
@@ -47,7 +47,7 @@ const STEPS: Step[] = [
       "The fabric is polished to smooth the surface and even out the pile for a clean finish.",
     icon: Pencil,
     x: LANE_L,
-    y: 450,
+    y: 520,
   },
   {
     title: "Printing",
@@ -55,7 +55,7 @@ const STEPS: Step[] = [
       "Vibrant, high-definition designs are printed on with precision, bringing colour to life.",
     icon: ListChecks,
     x: LANE_R,
-    y: 700,
+    y: 830,
   },
   {
     title: "Brushing",
@@ -63,7 +63,7 @@ const STEPS: Step[] = [
       "The surface is brushed to raise the fibres, creating the ultra-soft, cozy hand-feel.",
     icon: Settings,
     x: LANE_L,
-    y: 950,
+    y: 1140,
   },
   {
     title: "Products",
@@ -71,7 +71,7 @@ const STEPS: Step[] = [
       "Finished blankets are cut, stitched, quality-checked and packed — ready to ship.",
     icon: CheckCircle2,
     x: LANE_R,
-    y: 1200,
+    y: 1450,
   },
 ];
 
@@ -80,50 +80,48 @@ const STEPS: Step[] = [
    straight vertical run so the badges rest squarely on the road. */
 const ROAD_PATH = [
   `M ${LANE_R} 40`,
-  `L ${LANE_R} ${325 - R}`,
-  `Q ${LANE_R} 325 ${LANE_R - R} 325`,
-  `L ${LANE_L + R} 325`,
-  `Q ${LANE_L} 325 ${LANE_L} ${325 + R}`,
-  `L ${LANE_L} ${575 - R}`,
-  `Q ${LANE_L} 575 ${LANE_L + R} 575`,
-  `L ${LANE_R - R} 575`,
-  `Q ${LANE_R} 575 ${LANE_R} ${575 + R}`,
-  `L ${LANE_R} ${825 - R}`,
-  `Q ${LANE_R} 825 ${LANE_R - R} 825`,
-  `L ${LANE_L + R} 825`,
-  `Q ${LANE_L} 825 ${LANE_L} ${825 + R}`,
-  `L ${LANE_L} ${1075 - R}`,
-  `Q ${LANE_L} 1075 ${LANE_L + R} 1075`,
-  `L ${LANE_R - R} 1075`,
-  `Q ${LANE_R} 1075 ${LANE_R} ${1075 + R}`,
-  `L ${LANE_R} 1200`,
+  `L ${LANE_R} ${365 - R}`,
+  `Q ${LANE_R} 365 ${LANE_R - R} 365`,
+  `L ${LANE_L + R} 365`,
+  `Q ${LANE_L} 365 ${LANE_L} ${365 + R}`,
+  `L ${LANE_L} ${675 - R}`,
+  `Q ${LANE_L} 675 ${LANE_L + R} 675`,
+  `L ${LANE_R - R} 675`,
+  `Q ${LANE_R} 675 ${LANE_R} ${675 + R}`,
+  `L ${LANE_R} ${985 - R}`,
+  `Q ${LANE_R} 985 ${LANE_R - R} 985`,
+  `L ${LANE_L + R} 985`,
+  `Q ${LANE_L} 985 ${LANE_L} ${985 + R}`,
+  `L ${LANE_L} ${1295 - R}`,
+  `Q ${LANE_L} 1295 ${LANE_L + R} 1295`,
+  `L ${LANE_R - R} 1295`,
+  `Q ${LANE_R} 1295 ${LANE_R} ${1295 + R}`,
+  `L ${LANE_R} 1450`,
 ].join(" ");
 
 export function ProcessesPage() {
   return (
-    <section
-      style={{
-        backgroundImage: "linear-gradient(180deg, #23324e 0%, #131d31 100%)",
-      }}
-    >
-      <div className="container max-w-3xl py-16 md:py-24">
+    <section className="bg-secondary">
+      <div className="container max-w-4xl py-16 md:py-24">
         <Reveal className="text-center">
           <p className="text-sm font-semibold uppercase tracking-widest text-accent">
             How It's Made
           </p>
-          <h1 className="mx-auto mt-3 max-w-2xl font-serif text-4xl font-bold text-white md:text-5xl">
+          <h1 className="mx-auto mt-3 max-w-2xl font-serif text-4xl font-bold text-primary md:text-5xl">
             Our 5-Step Manufacturing Process
           </h1>
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-white/65 md:text-base">
+          <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
             From the first thread on the loom to the final packed blanket, every
             piece travels through five carefully crafted stages.
           </p>
         </Reveal>
 
-        {/* Road + overlaid stops. The SVG sets the intrinsic aspect ratio; the
-            icon badges and text are positioned as percentages of the same box,
-            so road and content scale together on every screen size. */}
-        <div className="relative mx-auto mt-12 w-full">
+        {/* The brand-blue lives only inside this rounded panel, framed by the
+            light page — so the timeline reads as a contained infographic rather
+            than a wall of blue. Road + overlaid stops share one SVG viewBox, so
+            road and content scale together on every screen size. */}
+        <div className="mx-auto mt-12 w-full max-w-2xl rounded-3xl bg-primary px-4 py-12 shadow-xl md:px-10">
+          <div className="relative w-full">
           <svg
             viewBox={`0 0 ${VB_W} ${VB_H}`}
             className="block h-auto w-full"
@@ -209,6 +207,7 @@ export function ProcessesPage() {
               </div>
             );
           })}
+          </div>
         </div>
       </div>
     </section>
