@@ -85,53 +85,62 @@ export async function deleteProductionEntry(id: string): Promise<void> {
 
 // --- Monthly summaries (per agent, per customer) ----------------------------
 
-export type PartyMonthlyRow = {
+/** One party's (agent or customer) dispatch total for a single period. */
+export type PartyPeriodRow = {
   id: string | null;
   name: string;
-  month: string;
+  period: string;
   amount: number;
   entries: number;
 };
+
+export type PeriodKind = "month" | "year";
 
 /**
  * Rollup views carry no FK metadata for PostgREST to embed the party name, so
  * the agent/customer names are fetched separately and joined here (same
  * approach as the stock rollups).
  */
-export async function fetchAgentMonthly(): Promise<PartyMonthlyRow[]> {
+export async function fetchAgentSummary(period: PeriodKind): Promise<PartyPeriodRow[]> {
   const [{ data, error }, agents] = await Promise.all([
     supabase
-      .from("production_agent_monthly")
-      .select("agent_id, month, amount, entries")
-      .order("month", { ascending: false }),
+      .from(period === "month" ? "production_agent_monthly" : "production_agent_yearly")
+      .select(`agent_id, ${period}, amount, entries`)
+      .order(period, { ascending: false }),
     fetchAgents(),
   ]);
   if (error) throw error;
   const names = new Map(agents.map((a) => [a.id, a.name]));
-  return (data ?? []).map((r) => ({
-    id: r.agent_id,
-    name: r.agent_id ? names.get(r.agent_id) ?? "—" : "—",
-    month: r.month as string,
-    amount: Number(r.amount ?? 0),
-    entries: Number(r.entries ?? 0),
-  }));
+  return (data ?? []).map((r) => {
+    const row = r as unknown as { agent_id: string | null; amount: number | null; entries: number | null } & Record<string, string>;
+    return {
+      id: row.agent_id,
+      name: row.agent_id ? names.get(row.agent_id) ?? "—" : "—",
+      period: row[period],
+      amount: Number(row.amount ?? 0),
+      entries: Number(row.entries ?? 0),
+    };
+  });
 }
 
-export async function fetchCustomerMonthly(): Promise<PartyMonthlyRow[]> {
+export async function fetchCustomerSummary(period: PeriodKind): Promise<PartyPeriodRow[]> {
   const [{ data, error }, customers] = await Promise.all([
     supabase
-      .from("production_customer_monthly")
-      .select("customer_id, month, amount, entries")
-      .order("month", { ascending: false }),
+      .from(period === "month" ? "production_customer_monthly" : "production_customer_yearly")
+      .select(`customer_id, ${period}, amount, entries`)
+      .order(period, { ascending: false }),
     fetchCustomers(),
   ]);
   if (error) throw error;
   const names = new Map(customers.map((c) => [c.id, c.name]));
-  return (data ?? []).map((r) => ({
-    id: r.customer_id,
-    name: r.customer_id ? names.get(r.customer_id) ?? "—" : "—",
-    month: r.month as string,
-    amount: Number(r.amount ?? 0),
-    entries: Number(r.entries ?? 0),
-  }));
+  return (data ?? []).map((r) => {
+    const row = r as unknown as { customer_id: string | null; amount: number | null; entries: number | null } & Record<string, string>;
+    return {
+      id: row.customer_id,
+      name: row.customer_id ? names.get(row.customer_id) ?? "—" : "—",
+      period: row[period],
+      amount: Number(row.amount ?? 0),
+      entries: Number(row.entries ?? 0),
+    };
+  });
 }

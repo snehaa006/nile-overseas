@@ -7,12 +7,13 @@ import {
   deleteAgent,
   deleteCustomer,
   deleteProductionEntry,
-  fetchAgentMonthly,
+  fetchAgentSummary,
   fetchAgents,
-  fetchCustomerMonthly,
+  fetchCustomerSummary,
   fetchCustomers,
   fetchProductionEntries,
   type AddProductionEntryInput,
+  type PeriodKind,
 } from "@/shared/api/production";
 
 export function useAgents() {
@@ -27,12 +28,18 @@ export function useProductionEntries() {
   return useQuery({ queryKey: qk.productionEntries, queryFn: fetchProductionEntries });
 }
 
-export function useAgentMonthly() {
-  return useQuery({ queryKey: qk.agentMonthly, queryFn: fetchAgentMonthly });
+export function useAgentSummary(period: PeriodKind) {
+  return useQuery({
+    queryKey: qk.agentSummary(period),
+    queryFn: () => fetchAgentSummary(period),
+  });
 }
 
-export function useCustomerMonthly() {
-  return useQuery({ queryKey: qk.customerMonthly, queryFn: fetchCustomerMonthly });
+export function useCustomerSummary(period: PeriodKind) {
+  return useQuery({
+    queryKey: qk.customerSummary(period),
+    queryFn: () => fetchCustomerSummary(period),
+  });
 }
 
 export function useAddAgent() {
@@ -71,8 +78,9 @@ function useInvalidateProductionEntries() {
   const qc = useQueryClient();
   return () => {
     qc.invalidateQueries({ queryKey: qk.productionEntries });
-    qc.invalidateQueries({ queryKey: qk.agentMonthly });
-    qc.invalidateQueries({ queryKey: qk.customerMonthly });
+    // Prefix match invalidates both the month and year variants.
+    qc.invalidateQueries({ queryKey: ["agent-summary"] });
+    qc.invalidateQueries({ queryKey: ["customer-summary"] });
   };
 }
 

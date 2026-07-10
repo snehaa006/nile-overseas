@@ -5,8 +5,8 @@ import {
   useAgents,
   useCustomers,
   useProductionEntries,
-  useAgentMonthly,
-  useCustomerMonthly,
+  useAgentSummary,
+  useCustomerSummary,
   useAddAgent,
   useAddCustomer,
   useDeleteAgent,
@@ -28,16 +28,14 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
 import { LoadingState, ErrorState, EmptyState, Spinner } from "@/shared/components/StateViews";
-import { dateKey, formatCurrency, formatDate, formatMonth, formatNumber } from "@/shared/utils/format";
+import { dateKey, formatCurrency, formatDate, formatMonth, formatNumber, formatYear } from "@/shared/utils/format";
 import type { Agent, Customer } from "@/shared/types/models";
-import type { PartyMonthlyRow } from "@/shared/api/production";
+import type { PartyPeriodRow, PeriodKind, ProductionEntryRow } from "@/shared/api/production";
 
 export function ProductionPage() {
   const entries = useProductionEntries();
   const agents = useAgents();
   const customers = useCustomers();
-  const agentMonthly = useAgentMonthly();
-  const customerMonthly = useCustomerMonthly();
   const deleteEntry = useDeleteProductionEntry();
 
   const [addOpen, setAddOpen] = useState(false);
@@ -46,6 +44,18 @@ export function ProductionPage() {
     () => (entries.data ?? []).reduce((s, e) => s + e.amount, 0),
     [entries.data],
   );
+
+  // Bucket entries under the month they belong to (newest first).
+  const entriesByMonth = useMemo(() => {
+    const map = new Map<string, ProductionEntryRow[]>();
+    for (const e of entries.data ?? []) {
+      const month = e.date.slice(0, 7); // YYYY-MM
+      const arr = map.get(month) ?? [];
+      arr.push(e);
+      map.set(month, arr);
+    }
+    return [...map.entries()].sort(([a], [b]) => b.localeCompare(a));
+  }, [entries.data]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -63,15 +73,15 @@ export function ProductionPage() {
       <div>
         <h1 className="font-serif text-3xl font-bold text-primary">Production</h1>
         <p className="text-muted-foreground">
-          Track which agent dispatched how many pieces to which customer.
+          Track which agent dispatched how much to which customer.
         </p>
       </div>
 
       <Tabs defaultValue="entries">
         <TabsList>
           <TabsTrigger value="entries">Entries</TabsTrigger>
-          <TabsTrigger value="agent-summary">Agent Summary</TabsTrigger>
-          <TabsTrigger value="customer-summary">Customer Summary</TabsTrigger>
+          <TabsTrigger value="monthly">Monthly Summary</TabsTrigger>
+          <TabsTrigger value="yearly">Yearly Summary</TabsTrigger>
           <TabsTrigger value="agents">Agents</TabsTrigger>
           <TabsTrigger value="customers">Customers</TabsTrigger>
         </TabsList>
@@ -99,84 +109,77 @@ export function ProductionPage() {
             <LoadingState />
           ) : entries.isError ? (
             <ErrorState error={entries.error} onRetry={entries.refetch} />
-          ) : (entries.data?.length ?? 0) === 0 ? (
+          ) : entriesByMonth.length === 0 ? (
             <EmptyState
               title="No production entries yet"
               description="Record an agent → customer dispatch to get started."
             />
           ) : (
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/60 hover:bg-muted/60">
-                      <TableHead className="font-bold text-foreground">Date</TableHead>
-                      <TableHead className="font-bold text-foreground">Agent</TableHead>
-                      <TableHead className="font-bold text-foreground">Customer</TableHead>
-                      <TableHead className="text-right font-bold text-foreground">Amount</TableHead>
-                      <TableHead className="w-12" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {entries.data!.map((e) => (
-                      <TableRow key={e.id}>
-                        <TableCell className="whitespace-nowrap py-3 text-muted-foreground">
-                          {formatDate(e.date)}
-                        </TableCell>
-                        <TableCell className="py-3 font-medium">
-                          {e.agent_name ?? <span className="text-muted-foreground">—</span>}
-                        </TableCell>
-                        <TableCell className="py-3">
-                          {e.customer_name ?? <span className="text-muted-foreground">—</span>}
-                        </TableCell>
-                        <TableCell className="py-3 text-right font-bold tabular-nums text-emerald-600">
-                          {formatCurrency(e.amount)}
-                        </TableCell>
-                        <TableCell className="py-3 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleDelete(e.id)}
-                            disabled={deleteEntry.isPending}
-                            aria-label="Delete entry"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            entriesByMonth.map(([month, monthEntries]) => {
+              const monthTotal = monthEntries.reduce((s, e) => s + e.amount, 0);
+              return (
+                <Card key={month}>
+                  <CardContent className="p-0">
+                    <div className="flex items-center justify-between border-b px-4 py-3">
+                      <h2 className="font-serif text-lg font-semibold text-primary">{formatMonth(month)}</h2>
+                      <span className="text-sm font-semibold tabular-nums text-primary">
+                        {formatCurrency(monthTotal)}
+                      </span>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/60 hover:bg-muted/60">
+                          <TableHead className="font-bold text-foreground">Date</TableHead>
+                          <TableHead className="font-bold text-foreground">Agent</TableHead>
+                          <TableHead className="font-bold text-foreground">Customer</TableHead>
+                          <TableHead className="text-right font-bold text-foreground">Amount</TableHead>
+                          <TableHead className="w-12" />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {monthEntries.map((e) => (
+                          <TableRow key={e.id}>
+                            <TableCell className="whitespace-nowrap py-3 text-muted-foreground">
+                              {formatDate(e.date)}
+                            </TableCell>
+                            <TableCell className="py-3 font-medium">
+                              {e.agent_name ?? <span className="text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell className="py-3">
+                              {e.customer_name ?? <span className="text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell className="py-3 text-right font-bold tabular-nums text-emerald-600">
+                              {formatCurrency(e.amount)}
+                            </TableCell>
+                            <TableCell className="py-3 text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                onClick={() => handleDelete(e.id)}
+                                disabled={deleteEntry.isPending}
+                                aria-label="Delete entry"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              );
+            })
           )}
         </TabsContent>
 
-        <TabsContent value="agent-summary">
-          <PartyMonthlySummary
-            rows={agentMonthly.data}
-            isLoading={agentMonthly.isLoading}
-            isError={agentMonthly.isError}
-            error={agentMonthly.error}
-            refetch={agentMonthly.refetch}
-            partyLabel="Agent"
-            emptyTitle="No agent totals yet"
-            emptyDescription="Record production entries to see how much each agent dispatched per month."
-          />
+        <TabsContent value="monthly">
+          <PeriodSummaryTab period="month" formatPeriod={formatMonth} />
         </TabsContent>
 
-        <TabsContent value="customer-summary">
-          <PartyMonthlySummary
-            rows={customerMonthly.data}
-            isLoading={customerMonthly.isLoading}
-            isError={customerMonthly.isError}
-            error={customerMonthly.error}
-            refetch={customerMonthly.refetch}
-            partyLabel="Customer"
-            emptyTitle="No customer totals yet"
-            emptyDescription="Record production entries to see how much each customer received per month."
-          />
+        <TabsContent value="yearly">
+          <PeriodSummaryTab period="year" formatPeriod={formatYear} />
         </TabsContent>
 
         <TabsContent value="agents">
@@ -216,6 +219,56 @@ export function ProductionPage() {
         />
       )}
     </div>
+  );
+}
+
+/** A Monthly/Yearly tab with an inner Agents ⇄ Customers switch. */
+function PeriodSummaryTab({
+  period,
+  formatPeriod,
+}: {
+  period: PeriodKind;
+  formatPeriod: (period: string) => string;
+}) {
+  const agent = useAgentSummary(period);
+  const customer = useCustomerSummary(period);
+  const noun = period === "month" ? "month" : "year";
+
+  return (
+    <Tabs defaultValue="agents" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="agents">Agents</TabsTrigger>
+        <TabsTrigger value="customers">Customers</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="agents">
+        <PartyPeriodSummary
+          rows={agent.data}
+          isLoading={agent.isLoading}
+          isError={agent.isError}
+          error={agent.error}
+          refetch={agent.refetch}
+          formatPeriod={formatPeriod}
+          partyLabel="Agent"
+          emptyTitle="No agent totals yet"
+          emptyDescription={`Record production entries to see how much each agent dispatched per ${noun}.`}
+        />
+      </TabsContent>
+
+      <TabsContent value="customers">
+        <PartyPeriodSummary
+          rows={customer.data}
+          isLoading={customer.isLoading}
+          isError={customer.isError}
+          error={customer.error}
+          refetch={customer.refetch}
+          formatPeriod={formatPeriod}
+          partyLabel="Customer"
+          emptyTitle="No customer totals yet"
+          emptyDescription={`Record production entries to see how much each customer received per ${noun}.`}
+        />
+      </TabsContent>
+    </Tabs>
   );
 }
 
@@ -307,32 +360,34 @@ function AddProductionEntryDialog({
   );
 }
 
-function PartyMonthlySummary({
+function PartyPeriodSummary({
   rows,
   isLoading,
   isError,
   error,
   refetch,
+  formatPeriod,
   partyLabel,
   emptyTitle,
   emptyDescription,
 }: {
-  rows: PartyMonthlyRow[] | undefined;
+  rows: PartyPeriodRow[] | undefined;
   isLoading: boolean;
   isError: boolean;
   error: unknown;
   refetch: () => void;
+  formatPeriod: (period: string) => string;
   partyLabel: string;
   emptyTitle: string;
   emptyDescription: string;
 }) {
-  // Group by month (newest first), each party's total within it sorted high→low.
-  const byMonth = useMemo(() => {
-    const map = new Map<string, PartyMonthlyRow[]>();
+  // Group by period (newest first); within each, each party's total sorted high→low.
+  const byPeriod = useMemo(() => {
+    const map = new Map<string, PartyPeriodRow[]>();
     for (const r of rows ?? []) {
-      const arr = map.get(r.month) ?? [];
+      const arr = map.get(r.period) ?? [];
       arr.push(r);
-      map.set(r.month, arr);
+      map.set(r.period, arr);
     }
     for (const arr of map.values()) arr.sort((a, b) => b.amount - a.amount);
     return [...map.entries()].sort(([a], [b]) => b.localeCompare(a));
@@ -346,15 +401,15 @@ function PartyMonthlySummary({
 
   return (
     <div className="space-y-6">
-      {byMonth.map(([month, monthRows]) => {
-        const monthTotal = monthRows.reduce((s, r) => s + r.amount, 0);
+      {byPeriod.map(([period, periodRows]) => {
+        const periodTotal = periodRows.reduce((s, r) => s + r.amount, 0);
         return (
-          <Card key={month}>
+          <Card key={period}>
             <CardContent className="p-0">
               <div className="flex items-center justify-between border-b px-4 py-3">
-                <h2 className="font-serif text-lg font-semibold text-primary">{formatMonth(month)}</h2>
+                <h2 className="font-serif text-lg font-semibold text-primary">{formatPeriod(period)}</h2>
                 <span className="text-sm font-semibold tabular-nums text-primary">
-                  {formatCurrency(monthTotal)}
+                  {formatCurrency(periodTotal)}
                 </span>
               </div>
               <Table>
@@ -366,8 +421,8 @@ function PartyMonthlySummary({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {monthRows.map((r) => (
-                    <TableRow key={`${month}-${r.id}`}>
+                  {periodRows.map((r) => (
+                    <TableRow key={`${period}-${r.id}`}>
                       <TableCell className="py-3 font-medium">{r.name}</TableCell>
                       <TableCell className="py-3 text-right font-bold tabular-nums text-emerald-600">
                         {formatCurrency(r.amount)}

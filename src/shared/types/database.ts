@@ -358,6 +358,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      production_agent_yearly: {
+        Row: {
+          agent_id: string | null;
+          year: string | null;
+          amount: number | null;
+          entries: number | null;
+        };
+        Relationships: [];
+      };
+      production_customer_yearly: {
+        Row: {
+          customer_id: string | null;
+          year: string | null;
+          amount: number | null;
+          entries: number | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: Record<string, never>;
     Enums: Record<string, never>;
