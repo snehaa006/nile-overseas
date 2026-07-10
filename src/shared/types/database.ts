@@ -143,7 +143,9 @@ export type Database = {
           address: string | null;
           company_name: string;
           email: string | null;
+          established_year: number;
           id: number;
+          logo_url: string | null;
           map_link: string | null;
           phone: string | null;
           updated_at: string;
@@ -154,7 +156,9 @@ export type Database = {
           address?: string | null;
           company_name?: string;
           email?: string | null;
+          established_year?: number;
           id?: number;
+          logo_url?: string | null;
           map_link?: string | null;
           phone?: string | null;
           updated_at?: string;

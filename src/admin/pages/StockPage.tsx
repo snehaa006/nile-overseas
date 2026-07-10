@@ -115,11 +115,12 @@ export function StockPage() {
 
   const handleExport = () => {
     if (!lines || lines.length === 0) return;
-    const headers = ["Brand", "Blanket", "SKU", "Opening", "Production", "Sales", "Closing"];
+    const headers = ["Brand", "Blanket", "SKU", "Weight (kg)", "Opening", "Production", "Sales", "Closing"];
     const rows = lines.map((l) => [
       l.brand_name,
       l.name,
       l.sku,
+      l.weight_kg,
       l.stock ? l.stock.opening_stock : (l.priorClosing ?? 0),
       l.stock?.production ?? 0,
       l.stock?.sales ?? 0,

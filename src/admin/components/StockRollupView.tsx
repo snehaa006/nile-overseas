@@ -4,13 +4,14 @@ import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { LoadingState, ErrorState, EmptyState } from "@/shared/components/StateViews";
-import { formatNumber } from "@/shared/utils/format";
+import { formatNumber, formatWeight } from "@/shared/utils/format";
 import { downloadCsv, toCsv } from "@/shared/utils/csv";
 
 export type RollupRow = {
   blanket_id: string;
   blanket_name: string;
   sku: string | null;
+  weight_kg: number;
   brand_name: string;
   period: string;
   opening_stock: number;
@@ -61,10 +62,10 @@ export function StockRollupView({
 
   const handleExport = () => {
     if (!rows || rows.length === 0) return;
-    const headers = ["Period", "Brand", "Blanket", "SKU", "Opening", "Production", "Sales", "Closing"];
+    const headers = ["Period", "Brand", "Blanket", "SKU", "Weight (kg)", "Opening", "Production", "Sales", "Closing"];
     const csvRows = byBrand.flatMap(([brand, brandRows]) =>
       brandRows.map((r) => [
-        formatPeriod(r.period), brand, r.blanket_name, r.sku,
+        formatPeriod(r.period), brand, r.blanket_name, r.sku, r.weight_kg,
         r.opening_stock, r.production, r.sales, r.closing_stock,
       ]),
     );
@@ -112,6 +113,9 @@ export function StockRollupView({
                     <TableCell className="font-medium">
                       {r.blanket_name}
                       <span className="ml-2 font-mono text-xs text-muted-foreground">{r.sku}</span>
+                      <span className="ml-2 whitespace-nowrap text-xs text-muted-foreground">
+                        &middot; {formatWeight(r.weight_kg)}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{formatNumber(r.opening_stock)}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatNumber(r.production)}</TableCell>

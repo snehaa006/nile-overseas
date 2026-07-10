@@ -4,7 +4,7 @@ A production-ready platform for **Nile Overseas**, combining a premium public
 website with a full admin dashboard (catalogue, inventory, date-wise production
 tracking, sales reports and CMS) over a single Supabase backend.
 
-- **Public website** (`/`) — browse the DRJ and Cloud9 blanket ranges. No login.
+- **Public website** (`/`) — browse the CloudNine and Paris Royale DRJ blanket ranges. No login.
 - **Admin dashboard** (`/admin`) — Supabase-authenticated staff manage everything
   without touching the database. No public signup.
 

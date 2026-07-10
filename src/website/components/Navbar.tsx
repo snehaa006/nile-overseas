@@ -18,7 +18,10 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur">
       <nav className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2.5">
+          {settings?.logo_url && (
+            <img src={settings.logo_url} alt="" className="h-9 w-9 object-contain" />
+          )}
           <span className="font-serif text-xl font-bold tracking-tight text-primary">
             {settings?.company_name ?? "Nile Overseas"}
           </span>

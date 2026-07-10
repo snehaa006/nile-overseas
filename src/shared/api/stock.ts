@@ -6,6 +6,7 @@ export type DayStockLine = {
   blanket_id: string;
   name: string;
   sku: string | null;
+  weight_kg: number;
   product_id: string;
   brand_name: string;
   stock: StockRow | null;
@@ -16,7 +17,7 @@ export type DayStockLine = {
 async function fetchActiveBlanketsWithBrand() {
   const { data, error } = await supabase
     .from("blankets")
-    .select("id, name, sku, product_id, display_order, products(name)")
+    .select("id, name, sku, weight_kg, product_id, display_order, products(name)")
     .eq("is_active", true)
     .order("product_id")
     .order("display_order");
@@ -59,6 +60,7 @@ export async function fetchDayStock(date: string): Promise<DayStockLine[]> {
       blanket_id: b.id,
       name: b.name,
       sku: b.sku,
+      weight_kg: Number(b.weight_kg),
       product_id: b.product_id,
       brand_name: (b.products as { name: string } | null)?.name ?? "—",
       stock: row
@@ -123,13 +125,14 @@ export async function fetchProductMonthlySummary(): Promise<
  * should still show up in reports.)
  */
 async function fetchBlanketBrandMap() {
-  const { data, error } = await supabase.from("blankets").select("id, name, sku, products(name)");
+  const { data, error } = await supabase.from("blankets").select("id, name, sku, weight_kg, products(name)");
   if (error) throw error;
-  const map = new Map<string, { name: string; sku: string | null; brand_name: string }>();
+  const map = new Map<string, { name: string; sku: string | null; weight_kg: number; brand_name: string }>();
   for (const b of data ?? []) {
     map.set(b.id, {
       name: b.name,
       sku: b.sku,
+      weight_kg: Number(b.weight_kg),
       brand_name: (b.products as { name: string } | null)?.name ?? "—",
     });
   }
@@ -140,6 +143,7 @@ export type BlanketMonthlyRow = {
   blanket_id: string;
   blanket_name: string;
   sku: string | null;
+  weight_kg: number;
   brand_name: string;
   month: string;
   opening_stock: number;
@@ -166,6 +170,7 @@ export async function fetchMonthlyRollup(): Promise<BlanketMonthlyRow[]> {
       blanket_id: r.blanket_id!,
       blanket_name: b?.name ?? "—",
       sku: b?.sku ?? null,
+      weight_kg: b?.weight_kg ?? 0,
       brand_name: b?.brand_name ?? "—",
       month: r.month!,
       opening_stock: Number(r.opening_stock ?? 0),
@@ -181,6 +186,7 @@ export type BlanketYearlyRow = {
   blanket_id: string;
   blanket_name: string;
   sku: string | null;
+  weight_kg: number;
   brand_name: string;
   year: string;
   opening_stock: number;
@@ -207,6 +213,7 @@ export async function fetchYearlyRollup(): Promise<BlanketYearlyRow[]> {
       blanket_id: r.blanket_id!,
       blanket_name: b?.name ?? "—",
       sku: b?.sku ?? null,
+      weight_kg: b?.weight_kg ?? 0,
       brand_name: b?.brand_name ?? "—",
       year: r.year!,
       opening_stock: Number(r.opening_stock ?? 0),
