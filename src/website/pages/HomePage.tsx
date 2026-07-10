@@ -52,16 +52,9 @@ export function HomePage() {
     );
   const carouselItems = allBlankets.slice(0, 10);
 
-  // A single showcase image for the hero (KBI-style). Use the first blanket
-  // that has a photo; falls back to a styled placeholder if none is uploaded.
-  const heroImage =
-    allBlankets
-      .map(({ blanket }) => {
-        const primary =
-          blanket.images?.find((i) => i.is_primary) ?? blanket.images?.[0];
-        return primary?.image_url ?? null;
-      })
-      .find((url): url is string => Boolean(url)) ?? null;
+  // A single showcase image for the hero, set by staff in Website Settings.
+  // Falls back to a styled placeholder when none has been uploaded.
+  const heroImage = settings?.hero_image_url ?? null;
 
   const establishedYear = settings?.established_year ?? 2014;
   const yearsOfCraft = new Date().getFullYear() - establishedYear;

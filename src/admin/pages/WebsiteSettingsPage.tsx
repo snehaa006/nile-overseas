@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { LoadingState, Spinner } from "@/shared/components/StateViews";
 import { BrandLogoManager } from "@/admin/components/BrandLogoManager";
 import { SiteLogoManager } from "@/admin/components/SiteLogoManager";
+import { HeroImageManager } from "@/admin/components/HeroImageManager";
 
 const schema = z.object({
   company_name: z.string().min(1, "Company name is required"),
@@ -102,6 +103,18 @@ export function WebsiteSettingsPage() {
           </Button>
         </div>
       </form>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Home hero image</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            The showcase photo shown in the homepage hero.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <HeroImageManager />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

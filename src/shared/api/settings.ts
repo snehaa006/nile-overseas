@@ -68,6 +68,49 @@ export async function removeSiteLogo(currentUrl: string | null | undefined): Pro
   return data;
 }
 
+/** Upload (or replace) the Home hero image shown on the public homepage. */
+export async function uploadHeroImage(currentUrl: string | null | undefined, file: File): Promise<SiteSettings> {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const path = `site/hero-${crypto.randomUUID()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(LOGO_BUCKET)
+    .upload(path, file, { cacheControl: "3600", upsert: false });
+  if (uploadError) throw uploadError;
+
+  const publicUrl = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path).data.publicUrl;
+  const previousPath = currentUrl ? storagePathFromUrl(currentUrl) : null;
+
+  const { data, error } = await supabase
+    .from("site_settings")
+    .update({ hero_image_url: publicUrl })
+    .eq("id", 1)
+    .select()
+    .single();
+  if (error) {
+    await supabase.storage.from(LOGO_BUCKET).remove([path]);
+    throw error;
+  }
+
+  if (previousPath) await supabase.storage.from(LOGO_BUCKET).remove([previousPath]);
+  return data;
+}
+
+export async function removeHeroImage(currentUrl: string | null | undefined): Promise<SiteSettings> {
+  const path = currentUrl ? storagePathFromUrl(currentUrl) : null;
+
+  const { data, error } = await supabase
+    .from("site_settings")
+    .update({ hero_image_url: null })
+    .eq("id", 1)
+    .select()
+    .single();
+  if (error) throw error;
+
+  if (path) await supabase.storage.from(LOGO_BUCKET).remove([path]);
+  return data;
+}
+
 function storagePathFromUrl(url: string): string | null {
   const marker = `/${LOGO_BUCKET}/`;
   const idx = url.indexOf(marker);
