@@ -50,14 +50,14 @@ export function StockRowEditor({
 
   return (
     <TableRow>
-      <TableCell className="font-medium">
+      <TableCell className="py-4 font-medium">
         {line.name}
         <span className="ml-2 font-mono text-xs text-muted-foreground">{line.sku}</span>
         <span className="ml-2 whitespace-nowrap text-xs text-muted-foreground">
           &middot; {formatWeight(line.weight_kg)}
         </span>
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="py-4 text-right">
         {editing && openingIsEditable ? (
           <Input
             type="number"
@@ -66,7 +66,7 @@ export function StockRowEditor({
             className="ml-auto h-9 w-24 text-right"
           />
         ) : openingIsEditable ? (
-          <span className="tabular-nums">{formatNumber(openingValue)}</span>
+          <span className="tabular-nums text-muted-foreground">{formatNumber(openingValue)}</span>
         ) : (
           <span
             title="Carried forward from the previous day's closing stock"
@@ -77,7 +77,7 @@ export function StockRowEditor({
           </span>
         )}
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="py-4 text-right">
         {editing ? (
           <Input
             type="number"
@@ -89,7 +89,7 @@ export function StockRowEditor({
           <span className="tabular-nums">{formatNumber(Number(values.production || 0))}</span>
         )}
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="py-4 text-right">
         {editing ? (
           <Input
             type="number"
@@ -98,10 +98,12 @@ export function StockRowEditor({
             className="ml-auto h-9 w-24 text-right"
           />
         ) : (
-          <span className="tabular-nums">{formatNumber(Number(values.sales || 0))}</span>
+          <span className="tabular-nums text-amber-600">{formatNumber(Number(values.sales || 0))}</span>
         )}
       </TableCell>
-      <TableCell className="text-right font-semibold tabular-nums">{formatNumber(closing)}</TableCell>
+      <TableCell className="py-4 text-right font-bold tabular-nums text-emerald-600">
+        {formatNumber(closing)}
+      </TableCell>
     </TableRow>
   );
 }
