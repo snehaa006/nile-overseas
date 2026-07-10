@@ -1,10 +1,12 @@
-import { useMemo, useState } from "react";
-import { Lock, Unlock, Download } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Lock, Unlock, Download, Check } from "lucide-react";
 import { toast } from "sonner";
 import {
-  useDayStock, useToggleDayLock, useMonthlyRollup, useYearlyRollup,
+  useDayStock, useToggleDayLock, useMonthlyRollup, useYearlyRollup, useUpsertStock,
 } from "@/shared/hooks/useStock";
-import { StockRowEditor } from "../components/StockRowEditor";
+import {
+  StockRowEditor, initialRowValues, isOpeningEditable, isRowDirty, type RowValues,
+} from "../components/StockRowEditor";
 import { StockRollupView } from "../components/StockRollupView";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -14,7 +16,7 @@ import { DatePicker } from "@/shared/components/ui/date-picker";
 import {
   Table, TableBody, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
-import { LoadingState, ErrorState, EmptyState } from "@/shared/components/StateViews";
+import { LoadingState, ErrorState, EmptyState, Spinner } from "@/shared/components/StateViews";
 import { dateKey, formatDate, formatMonth, formatNumber, formatYear } from "@/shared/utils/format";
 import { downloadCsv, toCsv } from "@/shared/utils/csv";
 import type { DayStockLine } from "@/shared/api/stock";
@@ -23,9 +25,23 @@ export function StockPage() {
   const [date, setDate] = useState(dateKey());
   const { data: lines, isLoading, isError, error, refetch } = useDayStock(date);
   const toggleLock = useToggleDayLock(date);
+  const upsertAll = useUpsertStock(date);
 
   const monthlyRollup = useMonthlyRollup();
   const yearlyRollup = useYearlyRollup();
+
+  const [rowValues, setRowValues] = useState<Record<string, RowValues>>({});
+
+  useEffect(() => {
+    if (!lines) return;
+    const next: Record<string, RowValues> = {};
+    for (const line of lines) next[line.blanket_id] = initialRowValues(line);
+    setRowValues(next);
+  }, [lines]);
+
+  const updateValue = (blanketId: string, field: "opening" | "production" | "sales", value: string) => {
+    setRowValues((prev) => ({ ...prev, [blanketId]: { ...prev[blanketId], [field]: value } }));
+  };
 
   const locked = useMemo(
     () => Boolean(lines?.some((l) => l.stock?.is_locked)),
@@ -41,6 +57,11 @@ export function StockPage() {
     }
     return [...map.entries()];
   }, [lines]);
+
+  const dirtyLines = useMemo(
+    () => (lines ?? []).filter((l) => rowValues[l.blanket_id] && isRowDirty(l, rowValues[l.blanket_id])),
+    [lines, rowValues],
+  );
 
   const totals = useMemo(() => {
     return (lines ?? []).reduce(
@@ -66,6 +87,29 @@ export function StockPage() {
       toast.success(locked ? "Day unlocked" : "Day locked");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
+    }
+  };
+
+  const handleSaveAll = async () => {
+    if (dirtyLines.length === 0) return;
+    try {
+      await upsertAll.mutateAsync(
+        dirtyLines.map((line) => {
+          const values = rowValues[line.blanket_id];
+          return {
+            blanket_id: line.blanket_id,
+            date,
+            opening_stock: isOpeningEditable(line)
+              ? Number(values.opening || 0)
+              : Number(values.opening),
+            production: Number(values.production || 0),
+            sales: Number(values.sales || 0),
+          };
+        }),
+      );
+      toast.success(`Saved ${dirtyLines.length} ${dirtyLines.length === 1 ? "blanket" : "blankets"}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Save failed");
     }
   };
 
@@ -120,6 +164,10 @@ export function StockPage() {
                 {locked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                 {locked ? "Unlock" : "Lock day"}
               </Button>
+              <Button onClick={handleSaveAll} disabled={locked || dirtyLines.length === 0 || upsertAll.isPending}>
+                {upsertAll.isPending ? <Spinner className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+                Save {dirtyLines.length > 0 ? `(${dirtyLines.length})` : "all"}
+              </Button>
             </div>
           </div>
 
@@ -154,7 +202,6 @@ export function StockPage() {
                         <TableHead>Production</TableHead>
                         <TableHead>Sales</TableHead>
                         <TableHead>Closing</TableHead>
-                        <TableHead className="text-right">Save</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -162,7 +209,8 @@ export function StockPage() {
                         <StockRowEditor
                           key={line.blanket_id}
                           line={line}
-                          date={date}
+                          values={rowValues[line.blanket_id] ?? initialRowValues(line)}
+                          onChange={(field, value) => updateValue(line.blanket_id, field, value)}
                           locked={locked}
                         />
                       ))}

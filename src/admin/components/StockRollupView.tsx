@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
@@ -6,15 +6,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { LoadingState, ErrorState, EmptyState } from "@/shared/components/StateViews";
 import { formatNumber } from "@/shared/utils/format";
 import { downloadCsv, toCsv } from "@/shared/utils/csv";
-import { cn } from "@/shared/utils/cn";
-
-type Metric = "closing_stock" | "production" | "sales";
-
-const METRICS: { value: Metric; label: string }[] = [
-  { value: "closing_stock", label: "Closing stock" },
-  { value: "production", label: "Production" },
-  { value: "sales", label: "Sales" },
-];
 
 export type RollupRow = {
   blanket_id: string;
@@ -22,12 +13,16 @@ export type RollupRow = {
   sku: string | null;
   brand_name: string;
   period: string;
+  opening_stock: number;
   production: number;
   sales: number;
   closing_stock: number;
 };
 
-/** Pivoted blanket × period table, reused for both the monthly and yearly rollup tabs. */
+/**
+ * Flat opening/production/sales/closing table per blanket per period,
+ * grouped by brand — reused for both the monthly and yearly rollup tabs.
+ */
 export function StockRollupView({
   rows,
   isLoading,
@@ -49,105 +44,81 @@ export function StockRollupView({
   emptyDescription: string;
   csvFilenamePrefix: string;
 }) {
-  const [metric, setMetric] = useState<Metric>("closing_stock");
-
-  const { periods, byBrand } = useMemo(() => {
-    const periodSet = new Set<string>();
-    const brandMap = new Map<
-      string,
-      Map<string, { name: string; sku: string | null; byPeriod: Map<string, number> }>
-    >();
-
+  const byBrand = useMemo(() => {
+    const map = new Map<string, RollupRow[]>();
     for (const r of rows ?? []) {
-      periodSet.add(r.period);
-      const brand = brandMap.get(r.brand_name) ?? new Map();
-      const blanket = brand.get(r.blanket_id) ?? { name: r.blanket_name, sku: r.sku, byPeriod: new Map() };
-      blanket.byPeriod.set(r.period, r[metric]);
-      brand.set(r.blanket_id, blanket);
-      brandMap.set(r.brand_name, brand);
+      const arr = map.get(r.brand_name) ?? [];
+      arr.push(r);
+      map.set(r.brand_name, arr);
     }
-
-    return {
-      periods: [...periodSet].sort(),
-      byBrand: [...brandMap.entries()].sort(([a], [b]) => a.localeCompare(b)),
-    };
-  }, [rows, metric]);
+    for (const arr of map.values()) {
+      arr.sort(
+        (a, b) => b.period.localeCompare(a.period) || a.blanket_name.localeCompare(b.blanket_name),
+      );
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [rows]);
 
   const handleExport = () => {
-    const headers = ["Brand", "Blanket", "SKU", ...periods.map(formatPeriod)];
-    const csvRows = byBrand.flatMap(([brand, blankets]) =>
-      [...blankets.values()].map((b) => [
-        brand,
-        b.name,
-        b.sku,
-        ...periods.map((p) => b.byPeriod.get(p) ?? ""),
+    if (!rows || rows.length === 0) return;
+    const headers = ["Period", "Brand", "Blanket", "SKU", "Opening", "Production", "Sales", "Closing"];
+    const csvRows = byBrand.flatMap(([brand, brandRows]) =>
+      brandRows.map((r) => [
+        formatPeriod(r.period), brand, r.blanket_name, r.sku,
+        r.opening_stock, r.production, r.sales, r.closing_stock,
       ]),
     );
-    downloadCsv(
-      `${csvFilenamePrefix}-${METRICS.find((m) => m.value === metric)?.label.toLowerCase().replace(" ", "-")}.csv`,
-      toCsv(headers, csvRows),
-    );
+    downloadCsv(`${csvFilenamePrefix}.csv`, toCsv(headers, csvRows));
   };
 
   if (isLoading) return <LoadingState />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
-  if (periods.length === 0) {
+  if (!rows || rows.length === 0) {
     return <EmptyState title={emptyTitle} description={emptyDescription} />;
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2">
-          {METRICS.map((m) => (
-            <button
-              key={m.value}
-              onClick={() => setMetric(m.value)}
-              className={cn(
-                "rounded-full border px-3 py-1.5 text-sm font-medium transition",
-                metric === m.value
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:bg-muted",
-              )}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
+      <div className="flex justify-end">
         <Button variant="outline" size="sm" onClick={handleExport}>
           <Download className="h-4 w-4" /> Export CSV
         </Button>
       </div>
 
-      {byBrand.map(([brand, blankets]) => (
+      {byBrand.map(([brand, brandRows]) => (
         <Card key={brand}>
           <CardContent className="p-0">
-            <div className="border-b px-4 py-3">
+            <div className="flex items-center justify-between border-b px-4 py-3">
               <h2 className="font-serif text-lg font-semibold text-primary">{brand}</h2>
+              <span className="text-sm text-muted-foreground">{brandRows.length} entries</span>
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="sticky left-0 bg-card">Blanket</TableHead>
-                  {periods.map((p) => (
-                    <TableHead key={p} className="whitespace-nowrap text-right">
-                      {formatPeriod(p)}
-                    </TableHead>
-                  ))}
+                  <TableHead>Period</TableHead>
+                  <TableHead>Blanket</TableHead>
+                  <TableHead className="text-right">Opening</TableHead>
+                  <TableHead className="text-right">Production</TableHead>
+                  <TableHead className="text-right">Sales</TableHead>
+                  <TableHead className="text-right">Closing</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {[...blankets.values()].map((b) => (
-                  <TableRow key={b.sku ?? b.name}>
-                    <TableCell className="sticky left-0 bg-card font-medium">
-                      {b.name}
-                      <span className="ml-2 font-mono text-xs text-muted-foreground">{b.sku}</span>
+                {brandRows.map((r) => (
+                  <TableRow key={`${r.blanket_id}-${r.period}`}>
+                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                      {formatPeriod(r.period)}
                     </TableCell>
-                    {periods.map((p) => (
-                      <TableCell key={p} className="text-right tabular-nums">
-                        {b.byPeriod.has(p) ? formatNumber(b.byPeriod.get(p)) : "—"}
-                      </TableCell>
-                    ))}
+                    <TableCell className="font-medium">
+                      {r.blanket_name}
+                      <span className="ml-2 font-mono text-xs text-muted-foreground">{r.sku}</span>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{formatNumber(r.opening_stock)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatNumber(r.production)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatNumber(r.sales)}</TableCell>
+                    <TableCell className="text-right font-semibold tabular-nums">
+                      {formatNumber(r.closing_stock)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
