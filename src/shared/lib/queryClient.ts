@@ -26,4 +26,10 @@ export const qk = {
   settings: ["settings"] as const,
   dashboard: ["dashboard"] as const,
   reportSummary: ["report-summary"] as const,
+  processDay: (date: string) => ["process-day", date] as const,
+  processMonthly: ["process-monthly"] as const,
+  processYearly: ["process-yearly"] as const,
+  agents: ["agents"] as const,
+  customers: ["customers"] as const,
+  productionEntries: ["production-entries"] as const,
 };

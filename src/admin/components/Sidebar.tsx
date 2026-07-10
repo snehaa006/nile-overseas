@@ -3,6 +3,8 @@ import {
   LayoutDashboard,
   Package,
   Boxes,
+  Factory,
+  Truck,
   Settings,
   BarChart3,
   LogOut,
@@ -16,6 +18,8 @@ const items = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/products", label: "Products", icon: Package, end: false },
   { to: "/admin/stock", label: "Stock", icon: Boxes, end: false },
+  { to: "/admin/process", label: "Process", icon: Factory, end: false },
+  { to: "/admin/production", label: "Production", icon: Truck, end: false },
   { to: "/admin/reports", label: "Reports", icon: BarChart3, end: false },
   { to: "/admin/settings", label: "Website Settings", icon: Settings, end: false },
 ];
