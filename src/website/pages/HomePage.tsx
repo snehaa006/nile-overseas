@@ -7,7 +7,9 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { BrandCard } from "../components/BrandCard";
 import { FeaturedCarousel } from "../components/FeaturedCarousel";
 import { ClientsTimeline } from "../components/ClientsTimeline";
+import { OurTeam } from "../components/OurTeam";
 import { useClients } from "@/shared/hooks/useClients";
+import { useTeamMembers } from "@/shared/hooks/useTeam";
 import { Reveal } from "@/shared/components/Reveal";
 import type { BlanketWithImages } from "@/shared/types/models";
 
@@ -45,6 +47,7 @@ export function HomePage() {
   const { data: brands, isLoading } = useCatalogue();
   const { data: settings } = useSettings();
   const { data: clients } = useClients();
+  const { data: team } = useTeamMembers();
 
   const allBlankets: { blanket: BlanketWithImages; brand: string }[] =
     (brands ?? []).flatMap((b) =>
@@ -240,6 +243,9 @@ export function HomePage() {
           </div>
         </div>
       </Reveal>
+
+      {/* Our Team — closing section, managed from Website Settings */}
+      <OurTeam members={team ?? []} />
     </>
   );
 }

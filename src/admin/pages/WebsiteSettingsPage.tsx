@@ -13,6 +13,7 @@ import { LoadingState, Spinner } from "@/shared/components/StateViews";
 import { BrandLogoManager } from "@/admin/components/BrandLogoManager";
 import { SiteLogoManager } from "@/admin/components/SiteLogoManager";
 import { HeroImageManager } from "@/admin/components/HeroImageManager";
+import { TeamManager } from "@/admin/components/TeamManager";
 
 const schema = z.object({
   company_name: z.string().min(1, "Company name is required"),
@@ -137,6 +138,19 @@ export function WebsiteSettingsPage() {
         </CardHeader>
         <CardContent>
           <BrandLogoManager />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Our Team</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            The people shown in the “Our Team” section at the bottom of the Home
+            page. Add a photo, name, role and short description for each person.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <TeamManager />
         </CardContent>
       </Card>
     </div>
