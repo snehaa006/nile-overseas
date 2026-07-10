@@ -31,6 +31,7 @@ export const qk = {
   processYearly: ["process-yearly"] as const,
   agents: ["agents"] as const,
   customers: ["customers"] as const,
+  clients: ["clients"] as const,
   productionEntries: ["production-entries"] as const,
   agentMonthly: ["agent-monthly"] as const,
   customerMonthly: ["customer-monthly"] as const,

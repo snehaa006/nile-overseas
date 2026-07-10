@@ -35,6 +35,24 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
         Relationships: [];
       };
+      clients: {
+        Row: {
+          created_at: string;
+          display_order: number;
+          id: string;
+          image_url: string | null;
+          name: string;
+        };
+        Insert: {
+          created_at?: string;
+          display_order?: number;
+          id?: string;
+          image_url?: string | null;
+          name: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["clients"]["Insert"]>;
+        Relationships: [];
+      };
       blankets: {
         Row: {
           created_at: string;

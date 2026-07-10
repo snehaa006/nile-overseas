@@ -7,6 +7,7 @@ import {
   Truck,
   Settings,
   BarChart3,
+  Building2,
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/shared/hooks/useAuth";
@@ -17,6 +18,7 @@ import { Button } from "@/shared/components/ui/button";
 const items = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/products", label: "Products", icon: Package, end: false },
+  { to: "/admin/clients", label: "Clients", icon: Building2, end: false },
   { to: "/admin/stock", label: "Stock", icon: Boxes, end: false },
   { to: "/admin/process", label: "Process", icon: Factory, end: false },
   { to: "/admin/production", label: "Production", icon: Truck, end: false },

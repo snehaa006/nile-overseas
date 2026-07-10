@@ -53,4 +53,15 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Scrapbook tilt for the clients timeline — rotation set per card via the
+     --rot variable; :hover straightens it (a pseudo-class rule outranks the
+     base class, so the hover state wins). */
+  .tl-card {
+    transform: rotate(var(--rot, 0deg));
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .tl-card:hover {
+    transform: rotate(0deg);
+  }
 }

@@ -11,6 +11,7 @@ import { ProtectedRoute } from "@/admin/ProtectedRoute";
 import { AdminLayout } from "@/admin/AdminLayout";
 import { DashboardPage } from "@/admin/pages/DashboardPage";
 import { ProductsAdminPage } from "@/admin/pages/ProductsAdminPage";
+import { ClientsAdminPage } from "@/admin/pages/ClientsAdminPage";
 import { BlanketEditorPage } from "@/admin/pages/BlanketEditorPage";
 import { StockPage } from "@/admin/pages/StockPage";
 import { ProcessPage } from "@/admin/pages/ProcessPage";
@@ -44,6 +45,7 @@ export function App() {
         <Route path="products" element={<ProductsAdminPage />} />
         <Route path="products/new" element={<BlanketEditorPage />} />
         <Route path="products/:id" element={<BlanketEditorPage />} />
+        <Route path="clients" element={<ClientsAdminPage />} />
         <Route path="stock" element={<StockPage />} />
         <Route path="process" element={<ProcessPage />} />
         <Route path="production" element={<ProductionPage />} />
