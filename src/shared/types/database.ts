@@ -340,6 +340,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      production_agent_monthly: {
+        Row: {
+          agent_id: string | null;
+          month: string | null;
+          amount: number | null;
+          entries: number | null;
+        };
+        Relationships: [];
+      };
+      production_customer_monthly: {
+        Row: {
+          customer_id: string | null;
+          month: string | null;
+          amount: number | null;
+          entries: number | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: Record<string, never>;
     Enums: Record<string, never>;

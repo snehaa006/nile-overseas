@@ -82,3 +82,56 @@ export async function deleteProductionEntry(id: string): Promise<void> {
   const { error } = await supabase.from("production_entries").delete().eq("id", id);
   if (error) throw error;
 }
+
+// --- Monthly summaries (per agent, per customer) ----------------------------
+
+export type PartyMonthlyRow = {
+  id: string | null;
+  name: string;
+  month: string;
+  amount: number;
+  entries: number;
+};
+
+/**
+ * Rollup views carry no FK metadata for PostgREST to embed the party name, so
+ * the agent/customer names are fetched separately and joined here (same
+ * approach as the stock rollups).
+ */
+export async function fetchAgentMonthly(): Promise<PartyMonthlyRow[]> {
+  const [{ data, error }, agents] = await Promise.all([
+    supabase
+      .from("production_agent_monthly")
+      .select("agent_id, month, amount, entries")
+      .order("month", { ascending: false }),
+    fetchAgents(),
+  ]);
+  if (error) throw error;
+  const names = new Map(agents.map((a) => [a.id, a.name]));
+  return (data ?? []).map((r) => ({
+    id: r.agent_id,
+    name: r.agent_id ? names.get(r.agent_id) ?? "—" : "—",
+    month: r.month as string,
+    amount: Number(r.amount ?? 0),
+    entries: Number(r.entries ?? 0),
+  }));
+}
+
+export async function fetchCustomerMonthly(): Promise<PartyMonthlyRow[]> {
+  const [{ data, error }, customers] = await Promise.all([
+    supabase
+      .from("production_customer_monthly")
+      .select("customer_id, month, amount, entries")
+      .order("month", { ascending: false }),
+    fetchCustomers(),
+  ]);
+  if (error) throw error;
+  const names = new Map(customers.map((c) => [c.id, c.name]));
+  return (data ?? []).map((r) => ({
+    id: r.customer_id,
+    name: r.customer_id ? names.get(r.customer_id) ?? "—" : "—",
+    month: r.month as string,
+    amount: Number(r.amount ?? 0),
+    entries: Number(r.entries ?? 0),
+  }));
+}

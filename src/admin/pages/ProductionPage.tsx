@@ -5,6 +5,8 @@ import {
   useAgents,
   useCustomers,
   useProductionEntries,
+  useAgentMonthly,
+  useCustomerMonthly,
   useAddAgent,
   useAddCustomer,
   useDeleteAgent,
@@ -26,13 +28,16 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
 import { LoadingState, ErrorState, EmptyState, Spinner } from "@/shared/components/StateViews";
-import { dateKey, formatDate, formatNumber } from "@/shared/utils/format";
+import { dateKey, formatCurrency, formatDate, formatMonth, formatNumber } from "@/shared/utils/format";
 import type { Agent, Customer } from "@/shared/types/models";
+import type { PartyMonthlyRow } from "@/shared/api/production";
 
 export function ProductionPage() {
   const entries = useProductionEntries();
   const agents = useAgents();
   const customers = useCustomers();
+  const agentMonthly = useAgentMonthly();
+  const customerMonthly = useCustomerMonthly();
   const deleteEntry = useDeleteProductionEntry();
 
   const [addOpen, setAddOpen] = useState(false);
@@ -65,6 +70,8 @@ export function ProductionPage() {
       <Tabs defaultValue="entries">
         <TabsList>
           <TabsTrigger value="entries">Entries</TabsTrigger>
+          <TabsTrigger value="agent-summary">Agent Summary</TabsTrigger>
+          <TabsTrigger value="customer-summary">Customer Summary</TabsTrigger>
           <TabsTrigger value="agents">Agents</TabsTrigger>
           <TabsTrigger value="customers">Customers</TabsTrigger>
         </TabsList>
@@ -74,7 +81,7 @@ export function ProductionPage() {
             <Card className="min-w-48">
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Total amount</p>
-                <p className="mt-1 text-2xl font-bold text-primary">{formatNumber(total)}</p>
+                <p className="mt-1 text-2xl font-bold text-primary">{formatCurrency(total)}</p>
               </CardContent>
             </Card>
             <Button onClick={() => setAddOpen(true)} disabled={!canAddEntry}>
@@ -123,7 +130,7 @@ export function ProductionPage() {
                           {e.customer_name ?? <span className="text-muted-foreground">—</span>}
                         </TableCell>
                         <TableCell className="py-3 text-right font-bold tabular-nums text-emerald-600">
-                          {formatNumber(e.amount)}
+                          {formatCurrency(e.amount)}
                         </TableCell>
                         <TableCell className="py-3 text-right">
                           <Button
@@ -144,6 +151,32 @@ export function ProductionPage() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="agent-summary">
+          <PartyMonthlySummary
+            rows={agentMonthly.data}
+            isLoading={agentMonthly.isLoading}
+            isError={agentMonthly.isError}
+            error={agentMonthly.error}
+            refetch={agentMonthly.refetch}
+            partyLabel="Agent"
+            emptyTitle="No agent totals yet"
+            emptyDescription="Record production entries to see how much each agent dispatched per month."
+          />
+        </TabsContent>
+
+        <TabsContent value="customer-summary">
+          <PartyMonthlySummary
+            rows={customerMonthly.data}
+            isLoading={customerMonthly.isLoading}
+            isError={customerMonthly.isError}
+            error={customerMonthly.error}
+            refetch={customerMonthly.refetch}
+            partyLabel="Customer"
+            emptyTitle="No customer totals yet"
+            emptyDescription="Record production entries to see how much each customer received per month."
+          />
         </TabsContent>
 
         <TabsContent value="agents">
@@ -271,6 +304,86 @@ function AddProductionEntryDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PartyMonthlySummary({
+  rows,
+  isLoading,
+  isError,
+  error,
+  refetch,
+  partyLabel,
+  emptyTitle,
+  emptyDescription,
+}: {
+  rows: PartyMonthlyRow[] | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  refetch: () => void;
+  partyLabel: string;
+  emptyTitle: string;
+  emptyDescription: string;
+}) {
+  // Group by month (newest first), each party's total within it sorted high→low.
+  const byMonth = useMemo(() => {
+    const map = new Map<string, PartyMonthlyRow[]>();
+    for (const r of rows ?? []) {
+      const arr = map.get(r.month) ?? [];
+      arr.push(r);
+      map.set(r.month, arr);
+    }
+    for (const arr of map.values()) arr.sort((a, b) => b.amount - a.amount);
+    return [...map.entries()].sort(([a], [b]) => b.localeCompare(a));
+  }, [rows]);
+
+  if (isLoading) return <LoadingState />;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
+  if (!rows || rows.length === 0) {
+    return <EmptyState title={emptyTitle} description={emptyDescription} />;
+  }
+
+  return (
+    <div className="space-y-6">
+      {byMonth.map(([month, monthRows]) => {
+        const monthTotal = monthRows.reduce((s, r) => s + r.amount, 0);
+        return (
+          <Card key={month}>
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between border-b px-4 py-3">
+                <h2 className="font-serif text-lg font-semibold text-primary">{formatMonth(month)}</h2>
+                <span className="text-sm font-semibold tabular-nums text-primary">
+                  {formatCurrency(monthTotal)}
+                </span>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/60 hover:bg-muted/60">
+                    <TableHead className="font-bold text-foreground">{partyLabel}</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">Amount</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">Entries</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {monthRows.map((r) => (
+                    <TableRow key={`${month}-${r.id}`}>
+                      <TableCell className="py-3 font-medium">{r.name}</TableCell>
+                      <TableCell className="py-3 text-right font-bold tabular-nums text-emerald-600">
+                        {formatCurrency(r.amount)}
+                      </TableCell>
+                      <TableCell className="py-3 text-right tabular-nums text-muted-foreground">
+                        {formatNumber(r.entries)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
   );
 }
 

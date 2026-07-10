@@ -7,7 +7,9 @@ import {
   deleteAgent,
   deleteCustomer,
   deleteProductionEntry,
+  fetchAgentMonthly,
   fetchAgents,
+  fetchCustomerMonthly,
   fetchCustomers,
   fetchProductionEntries,
   type AddProductionEntryInput,
@@ -23,6 +25,14 @@ export function useCustomers() {
 
 export function useProductionEntries() {
   return useQuery({ queryKey: qk.productionEntries, queryFn: fetchProductionEntries });
+}
+
+export function useAgentMonthly() {
+  return useQuery({ queryKey: qk.agentMonthly, queryFn: fetchAgentMonthly });
+}
+
+export function useCustomerMonthly() {
+  return useQuery({ queryKey: qk.customerMonthly, queryFn: fetchCustomerMonthly });
 }
 
 export function useAddAgent() {
@@ -57,18 +67,27 @@ export function useDeleteCustomer() {
   });
 }
 
-export function useAddProductionEntry() {
+function useInvalidateProductionEntries() {
   const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: qk.productionEntries });
+    qc.invalidateQueries({ queryKey: qk.agentMonthly });
+    qc.invalidateQueries({ queryKey: qk.customerMonthly });
+  };
+}
+
+export function useAddProductionEntry() {
+  const invalidate = useInvalidateProductionEntries();
   return useMutation({
     mutationFn: (input: AddProductionEntryInput) => addProductionEntry(input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.productionEntries }),
+    onSuccess: invalidate,
   });
 }
 
 export function useDeleteProductionEntry() {
-  const qc = useQueryClient();
+  const invalidate = useInvalidateProductionEntries();
   return useMutation({
     mutationFn: (id: string) => deleteProductionEntry(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.productionEntries }),
+    onSuccess: invalidate,
   });
 }

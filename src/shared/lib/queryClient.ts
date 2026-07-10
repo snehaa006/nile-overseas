@@ -32,4 +32,6 @@ export const qk = {
   agents: ["agents"] as const,
   customers: ["customers"] as const,
   productionEntries: ["production-entries"] as const,
+  agentMonthly: ["agent-monthly"] as const,
+  customerMonthly: ["customer-monthly"] as const,
 };
