@@ -1,12 +1,13 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Award, Layers, Truck, Users } from "lucide-react";
+import { ArrowRight, Award, ImageOff, Layers, Truck, Users } from "lucide-react";
 import { useCatalogue } from "@/shared/hooks/useCatalogue";
 import { useSettings } from "@/shared/hooks/useSettings";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { BlanketCard } from "../components/BlanketCard";
 import { BrandCard } from "../components/BrandCard";
 import { FeaturedCarousel } from "../components/FeaturedCarousel";
+import { ClientsTimeline } from "../components/ClientsTimeline";
+import { useClients } from "@/shared/hooks/useClients";
 import { Reveal } from "@/shared/components/Reveal";
 import type { BlanketWithImages } from "@/shared/types/models";
 
@@ -43,13 +44,24 @@ const FEATURES = [
 export function HomePage() {
   const { data: brands, isLoading } = useCatalogue();
   const { data: settings } = useSettings();
+  const { data: clients } = useClients();
 
   const allBlankets: { blanket: BlanketWithImages; brand: string }[] =
     (brands ?? []).flatMap((b) =>
       b.blankets.map((bl) => ({ blanket: bl, brand: b.name })),
     );
-  const featured = allBlankets.slice(0, 4);
   const carouselItems = allBlankets.slice(0, 10);
+
+  // A single showcase image for the hero (KBI-style). Use the first blanket
+  // that has a photo; falls back to a styled placeholder if none is uploaded.
+  const heroImage =
+    allBlankets
+      .map(({ blanket }) => {
+        const primary =
+          blanket.images?.find((i) => i.is_primary) ?? blanket.images?.[0];
+        return primary?.image_url ?? null;
+      })
+      .find((url): url is string => Boolean(url)) ?? null;
 
   const establishedYear = settings?.established_year ?? 2014;
   const yearsOfCraft = new Date().getFullYear() - establishedYear;
@@ -91,16 +103,21 @@ export function HomePage() {
           </div>
           <div className="relative hidden md:block animate-scale-in" style={{ animationDelay: "150ms" }}>
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-brand-ocean/20 via-brand-midnight/10 to-primary/10" />
-            <div className="relative grid h-full grid-cols-2 gap-4 p-4">
-              {featured.slice(0, 2).map(({ blanket, brand }, i) => (
-                <div
-                  key={blanket.id}
-                  className="animate-fade-in-up self-center"
-                  style={{ animationDelay: `${250 + i * 120}ms` }}
-                >
-                  <BlanketCard blanket={blanket} brandName={brand} />
-                </div>
-              ))}
+            <div className="relative flex h-full items-center justify-center p-4">
+              <div className="aspect-[4/3] w-full overflow-hidden rounded-2xl border bg-card shadow-xl shadow-primary/10">
+                {heroImage ? (
+                  <img
+                    src={heroImage}
+                    alt="Nile Overseas blankets"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-secondary to-muted text-muted-foreground">
+                    <ImageOff className="h-10 w-10" />
+                    <span className="text-sm">Showcase image</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -201,6 +218,9 @@ export function HomePage() {
           <p className="text-muted-foreground">Products coming soon.</p>
         )}
       </section>
+
+      {/* Clients timeline */}
+      <ClientsTimeline clients={clients ?? []} />
 
       {/* CTA banner */}
       <Reveal as="section" className="container pb-20">

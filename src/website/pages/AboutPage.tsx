@@ -1,9 +1,7 @@
 import { Award, Factory, HeartHandshake, Sparkles } from "lucide-react";
 import { useSettings } from "@/shared/hooks/useSettings";
 import { useCatalogue } from "@/shared/hooks/useCatalogue";
-import { useClients } from "@/shared/hooks/useClients";
 import { Reveal } from "@/shared/components/Reveal";
-import { ClientsTimeline } from "../components/ClientsTimeline";
 import { brandLogo } from "../lib/brandLogos";
 
 const BRAND_BLURBS: Record<string, string> = {
@@ -16,13 +14,11 @@ const BRAND_BLURBS: Record<string, string> = {
 export function AboutPage() {
   const { data: s } = useSettings();
   const { data: brands } = useCatalogue();
-  const { data: clients } = useClients();
 
   const establishedYear = s?.established_year ?? 2014;
   const yearsOfCraft = new Date().getFullYear() - establishedYear;
 
   return (
-    <>
     <div className="container max-w-4xl py-16">
       <div className="animate-fade-in-up">
         <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
@@ -75,9 +71,6 @@ export function AboutPage() {
         })}
       </div>
     </div>
-
-    <ClientsTimeline clients={clients ?? []} />
-    </>
   );
 }
 

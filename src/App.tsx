@@ -5,6 +5,7 @@ import { AboutPage } from "@/website/pages/AboutPage";
 import { ProductsPage } from "@/website/pages/ProductsPage";
 import { ProcessesPage } from "@/website/pages/ProcessesPage";
 import { BlanketDetailPage } from "@/website/pages/BlanketDetailPage";
+import { ClientsPage } from "@/website/pages/ClientsPage";
 import { ContactPage } from "@/website/pages/ContactPage";
 
 import { LoginPage } from "@/admin/pages/LoginPage";
@@ -30,6 +31,7 @@ export function App() {
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/processes" element={<ProcessesPage />} />
         <Route path="/products/:sku" element={<BlanketDetailPage />} />
+        <Route path="/clients" element={<ClientsPage />} />
         <Route path="/contact" element={<ContactPage />} />
       </Route>
 
