@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Lock, Unlock, Download, Check, Pencil, X } from "lucide-react";
+import { Lock, Unlock, Download, Check, Pencil, X, Search } from "lucide-react";
 import { toast } from "sonner";
 import {
   useDayStock, useToggleDayLock, useMonthlyRollup, useYearlyRollup, useUpsertStock,
@@ -11,6 +11,7 @@ import { StockRollupView } from "../components/StockRollupView";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent } from "@/shared/components/ui/card";
+import { Input } from "@/shared/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/components/ui/tabs";
 import { DatePicker } from "@/shared/components/ui/date-picker";
 import {
@@ -32,6 +33,7 @@ export function StockPage() {
 
   const [rowValues, setRowValues] = useState<Record<string, RowValues>>({});
   const [editMode, setEditMode] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (!lines) return;
@@ -63,6 +65,19 @@ export function StockPage() {
     }
     return [...map.entries()];
   }, [lines]);
+
+  const filteredByBrand = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return byBrand;
+    return byBrand
+      .map(([brand, brandLines]) => [
+        brand,
+        brandLines.filter(
+          (l) => l.name.toLowerCase().includes(q) || (l.sku ?? "").toLowerCase().includes(q),
+        ),
+      ] as [string, DayStockLine[]])
+      .filter(([, brandLines]) => brandLines.length > 0);
+  }, [byBrand, search]);
 
   const dirtyLines = useMemo(
     () => (lines ?? []).filter((l) => rowValues[l.blanket_id] && isRowDirty(l, rowValues[l.blanket_id])),
@@ -208,6 +223,18 @@ export function StockPage() {
             <Summary label="Closing stock" value={totals.closing} />
           </div>
 
+          {byBrand.length > 0 && (
+            <div className="relative w-full sm:ml-auto sm:w-72">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search blanket…"
+                className="pl-9"
+              />
+            </div>
+          )}
+
           {isLoading ? (
             <LoadingState />
           ) : isError ? (
@@ -217,8 +244,13 @@ export function StockPage() {
               title="No active blankets"
               description="Add and activate blankets to track their daily stock."
             />
+          ) : filteredByBrand.length === 0 ? (
+            <EmptyState
+              title="No matches"
+              description={`No blankets match "${search}".`}
+            />
           ) : (
-            byBrand.map(([brand, brandLines]) => (
+            filteredByBrand.map(([brand, brandLines]) => (
               <Card key={brand}>
                 <CardContent className="p-0">
                   <div className="flex items-center justify-between border-b px-4 py-3">
@@ -227,7 +259,7 @@ export function StockPage() {
                   </div>
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="bg-muted/60 hover:bg-muted/60">
                         <TableHead className="font-bold text-foreground">Blanket</TableHead>
                         <TableHead className="text-right font-bold text-foreground">Opening</TableHead>
                         <TableHead className="text-right font-bold text-foreground">Production</TableHead>

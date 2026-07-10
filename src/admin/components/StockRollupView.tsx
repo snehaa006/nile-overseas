@@ -1,7 +1,8 @@
-import { useMemo } from "react";
-import { Download } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Download, Search } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
+import { Input } from "@/shared/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { LoadingState, ErrorState, EmptyState } from "@/shared/components/StateViews";
 import { formatNumber, formatWeight } from "@/shared/utils/format";
@@ -45,6 +46,8 @@ export function StockRollupView({
   emptyDescription: string;
   csvFilenamePrefix: string;
 }) {
+  const [search, setSearch] = useState("");
+
   const byBrand = useMemo(() => {
     const map = new Map<string, RollupRow[]>();
     for (const r of rows ?? []) {
@@ -59,6 +62,19 @@ export function StockRollupView({
     }
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [rows]);
+
+  const filteredByBrand = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return byBrand;
+    return byBrand
+      .map(([brand, brandRows]) => [
+        brand,
+        brandRows.filter(
+          (r) => r.blanket_name.toLowerCase().includes(q) || (r.sku ?? "").toLowerCase().includes(q),
+        ),
+      ] as [string, RollupRow[]])
+      .filter(([, brandRows]) => brandRows.length > 0);
+  }, [byBrand, search]);
 
   const handleExport = () => {
     if (!rows || rows.length === 0) return;
@@ -80,13 +96,25 @@ export function StockRollupView({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="relative w-full sm:w-72">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search blanket…"
+            className="pl-9"
+          />
+        </div>
         <Button variant="outline" size="sm" onClick={handleExport}>
           <Download className="h-4 w-4" /> Export CSV
         </Button>
       </div>
 
-      {byBrand.map(([brand, brandRows]) => (
+      {filteredByBrand.length === 0 ? (
+        <EmptyState title="No matches" description={`No blankets match "${search}".`} />
+      ) : (
+        filteredByBrand.map(([brand, brandRows]) => (
         <Card key={brand}>
           <CardContent className="p-0">
             <div className="flex items-center justify-between border-b px-4 py-3">
@@ -95,7 +123,7 @@ export function StockRollupView({
             </div>
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/60 hover:bg-muted/60">
                   <TableHead className="font-bold text-foreground">Period</TableHead>
                   <TableHead className="font-bold text-foreground">Blanket</TableHead>
                   <TableHead className="text-right font-bold text-foreground">Opening</TableHead>
@@ -107,20 +135,20 @@ export function StockRollupView({
               <TableBody>
                 {brandRows.map((r) => (
                   <TableRow key={`${r.blanket_id}-${r.period}`}>
-                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                    <TableCell className="whitespace-nowrap py-4 text-muted-foreground">
                       {formatPeriod(r.period)}
                     </TableCell>
-                    <TableCell className="font-medium">
+                    <TableCell className="py-4 font-medium">
                       {r.blanket_name}
                       <span className="ml-2 font-mono text-xs text-muted-foreground">{r.sku}</span>
                       <span className="ml-2 whitespace-nowrap text-xs text-muted-foreground">
                         &middot; {formatWeight(r.weight_kg)}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{formatNumber(r.opening_stock)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatNumber(r.production)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatNumber(r.sales)}</TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums">
+                    <TableCell className="py-4 text-right tabular-nums text-muted-foreground">{formatNumber(r.opening_stock)}</TableCell>
+                    <TableCell className="py-4 text-right tabular-nums">{formatNumber(r.production)}</TableCell>
+                    <TableCell className="py-4 text-right tabular-nums text-amber-600">{formatNumber(r.sales)}</TableCell>
+                    <TableCell className="py-4 text-right font-bold tabular-nums text-emerald-600">
                       {formatNumber(r.closing_stock)}
                     </TableCell>
                   </TableRow>
@@ -129,7 +157,8 @@ export function StockRollupView({
             </Table>
           </CardContent>
         </Card>
-      ))}
+        ))
+      )}
     </div>
   );
 }
