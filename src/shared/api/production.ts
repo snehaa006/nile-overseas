@@ -37,6 +37,8 @@ export async function deleteCustomer(id: string): Promise<void> {
 
 // --- Production entries -----------------------------------------------------
 
+const INVOICES_BUCKET = "invoices";
+
 export type ProductionEntryRow = {
   id: string;
   date: string;
@@ -45,13 +47,14 @@ export type ProductionEntryRow = {
   agent_name: string | null;
   customer_name: string | null;
   amount: number;
+  invoice_path: string | null;
 };
 
 /** All production dispatch entries, newest first, with agent/customer names joined. */
 export async function fetchProductionEntries(): Promise<ProductionEntryRow[]> {
   const { data, error } = await supabase
     .from("production_entries")
-    .select("id, date, agent_id, customer_id, amount, agents(name), customers(name)")
+    .select("id, date, agent_id, customer_id, amount, invoice_path, agents(name), customers(name)")
     .order("date", { ascending: false })
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -63,6 +66,7 @@ export async function fetchProductionEntries(): Promise<ProductionEntryRow[]> {
     agent_name: (r.agents as { name: string } | null)?.name ?? null,
     customer_name: (r.customers as { name: string } | null)?.name ?? null,
     amount: Number(r.amount),
+    invoice_path: r.invoice_path,
   }));
 }
 
@@ -71,16 +75,57 @@ export type AddProductionEntryInput = {
   agent_id: string;
   customer_id: string;
   amount: number;
+  /** Optional invoice PDF, stored in the private invoices bucket. */
+  invoiceFile?: File | null;
 };
 
 export async function addProductionEntry(input: AddProductionEntryInput): Promise<void> {
-  const { error } = await supabase.from("production_entries").insert(input);
-  if (error) throw error;
+  const { invoiceFile, ...entry } = input;
+
+  let invoicePath: string | null = null;
+  if (invoiceFile) {
+    invoicePath = `${crypto.randomUUID()}.pdf`;
+    const { error: uploadError } = await supabase.storage
+      .from(INVOICES_BUCKET)
+      .upload(invoicePath, invoiceFile, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: "application/pdf",
+      });
+    if (uploadError) throw uploadError;
+  }
+
+  const { error } = await supabase
+    .from("production_entries")
+    .insert({ ...entry, invoice_path: invoicePath });
+  if (error) {
+    // roll back the orphaned storage object on DB failure
+    if (invoicePath) await supabase.storage.from(INVOICES_BUCKET).remove([invoicePath]);
+    throw error;
+  }
 }
 
-export async function deleteProductionEntry(id: string): Promise<void> {
-  const { error } = await supabase.from("production_entries").delete().eq("id", id);
+export async function deleteProductionEntry(entry: {
+  id: string;
+  invoice_path: string | null;
+}): Promise<void> {
+  const { error } = await supabase.from("production_entries").delete().eq("id", entry.id);
   if (error) throw error;
+  if (entry.invoice_path) {
+    await supabase.storage.from(INVOICES_BUCKET).remove([entry.invoice_path]);
+  }
+}
+
+/**
+ * The invoices bucket is private, so viewing goes through a short-lived
+ * signed URL rather than a public one.
+ */
+export async function getInvoiceUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(INVOICES_BUCKET)
+    .createSignedUrl(path, 60 * 60);
+  if (error) throw error;
+  return data.signedUrl;
 }
 
 // --- Monthly summaries (per agent, per customer) ----------------------------

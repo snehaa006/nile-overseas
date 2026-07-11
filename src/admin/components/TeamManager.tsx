@@ -30,7 +30,7 @@ function validImage(file: File): boolean {
 }
 
 /**
- * Add / edit / remove the people shown in the public "Our Team" section.
+ * Add / edit / remove the people shown in the public "Ownership and management" section.
  * Embedded as a card inside Website Settings.
  */
 export function TeamManager() {

@@ -4,7 +4,7 @@ import type { TablesInsert, TablesUpdate } from "@/shared/types/database";
 
 const TEAM_PHOTOS_BUCKET = "team-photos";
 
-/** All team members, ordered for the public "Our Team" section. */
+/** All team members, ordered for the public "Ownership and management" section. */
 export async function fetchTeamMembers(): Promise<TeamMember[]> {
   const { data, error } = await supabase
     .from("team_members")
