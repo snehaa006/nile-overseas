@@ -4,10 +4,10 @@ import { toast } from "sonner";
 import { useSettings } from "@/shared/hooks/useSettings";
 import { useClients } from "@/shared/hooks/useClients";
 import { useCreateReview } from "@/shared/hooks/useReviews";
+import { useCreateContactMessage } from "@/shared/hooks/useMessages";
 import { LoadingState, Spinner } from "@/shared/components/StateViews";
 import { Reveal } from "@/shared/components/Reveal";
 import { cn } from "@/shared/utils/cn";
-import type { SiteSettings } from "@/shared/types/models";
 
 /**
  * Contact page — a 1:1 structural port of the reference template:
@@ -102,7 +102,7 @@ export function ContactPage() {
       {/* Enquiry form + customer reviews card. */}
       <section className="container py-12">
         <div className="grid gap-8 lg:grid-cols-[3fr_2fr]">
-          <EnquiryForm settings={s} />
+          <EnquiryForm />
           <ReviewFormCard />
         </div>
       </section>
@@ -164,36 +164,36 @@ export function ContactPage() {
 const FIELD =
   "h-12 w-full rounded-full border-0 bg-secondary/70 px-5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring";
 
-/** The main enquiry form — submits via the visitor's mail app (or WhatsApp). */
-function EnquiryForm({ settings }: { settings: SiteSettings | null | undefined }) {
+/** The main enquiry form — saves the message for staff to read in the admin panel. */
+function EnquiryForm() {
+  const create = useCreateContactMessage();
   const [form, setForm] = useState({ email: "", phone: "", name: "", message: "" });
   const set =
     (key: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.message.trim()) {
       toast.error("Please add your name and a message");
       return;
     }
-    const lines = [`Name: ${form.name.trim()}`];
-    if (form.email.trim()) lines.push(`Email: ${form.email.trim()}`);
-    if (form.phone.trim()) lines.push(`Phone: ${form.phone.trim()}`);
-    lines.push("", form.message.trim());
-    const body = lines.join("\n");
-
-    if (settings?.email) {
-      const subject = `Website enquiry from ${form.name.trim()}`;
-      window.location.href = `mailto:${settings.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    } else if (settings?.whatsapp) {
-      window.open(
-        `https://wa.me/${settings.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(body)}`,
-        "_blank",
-      );
-    } else {
-      toast.error("Contact details are not configured yet");
+    if (!form.email.trim() && !form.phone.trim()) {
+      toast.error("Please add an email or phone number so we can reach you");
+      return;
+    }
+    try {
+      await create.mutateAsync({
+        name: form.name.trim(),
+        email: form.email.trim() || null,
+        phone: form.phone.trim() || null,
+        message: form.message.trim(),
+      });
+      toast.success("Message sent — we'll get back to you soon!");
+      setForm({ email: "", phone: "", name: "", message: "" });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not send message");
     }
   };
 
@@ -230,9 +230,10 @@ function EnquiryForm({ settings }: { settings: SiteSettings | null | undefined }
       />
       <button
         type="submit"
-        className="mt-5 inline-flex h-11 items-center rounded-full bg-primary px-8 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
+        disabled={create.isPending}
+        className="mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-primary px-8 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60"
       >
-        Submit
+        {create.isPending && <Spinner className="h-4 w-4" />} Submit
       </button>
     </form>
   );

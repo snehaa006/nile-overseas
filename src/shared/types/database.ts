@@ -274,6 +274,28 @@ export type Database = {
           },
         ];
       };
+      contact_messages: {
+        Row: {
+          created_at: string;
+          email: string | null;
+          id: string;
+          is_read: boolean;
+          message: string;
+          name: string;
+          phone: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          email?: string | null;
+          id?: string;
+          is_read?: boolean;
+          message: string;
+          name: string;
+          phone?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["contact_messages"]["Insert"]>;
+        Relationships: [];
+      };
       reviews: {
         Row: {
           created_at: string;
