@@ -274,6 +274,26 @@ export type Database = {
           },
         ];
       };
+      reviews: {
+        Row: {
+          created_at: string;
+          id: string;
+          is_approved: boolean;
+          message: string;
+          name: string;
+          rating: number;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          is_approved?: boolean;
+          message: string;
+          name: string;
+          rating: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["reviews"]["Insert"]>;
+        Relationships: [];
+      };
       site_settings: {
         Row: {
           about_text: string | null;

@@ -14,6 +14,7 @@ import { BrandLogoManager } from "@/admin/components/BrandLogoManager";
 import { SiteLogoManager } from "@/admin/components/SiteLogoManager";
 import { HeroImageManager } from "@/admin/components/HeroImageManager";
 import { TeamManager } from "@/admin/components/TeamManager";
+import { ReviewsManager } from "@/admin/components/ReviewsManager";
 
 const schema = z.object({
   company_name: z.string().min(1, "Company name is required"),
@@ -151,6 +152,19 @@ export function WebsiteSettingsPage() {
         </CardHeader>
         <CardContent>
           <TeamManager />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Customer Reviews</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Reviews visitors leave on the Contact page, shown on the Home page.
+            Hide or delete anything you don't want on the website.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <ReviewsManager />
         </CardContent>
       </Card>
     </div>
