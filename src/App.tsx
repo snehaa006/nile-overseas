@@ -20,6 +20,7 @@ import { ProcessPage } from "@/admin/pages/ProcessPage";
 import { ProductionPage } from "@/admin/pages/ProductionPage";
 import { WebsiteSettingsPage } from "@/admin/pages/WebsiteSettingsPage";
 import { ReportsPage } from "@/admin/pages/ReportsPage";
+import { MessagesPage } from "@/admin/pages/MessagesPage";
 
 export function App() {
   return (
@@ -55,6 +56,7 @@ export function App() {
         <Route path="production" element={<ProductionPage />} />
         <Route path="settings" element={<WebsiteSettingsPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="messages" element={<MessagesPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

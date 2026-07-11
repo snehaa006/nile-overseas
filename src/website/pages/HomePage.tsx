@@ -8,8 +8,10 @@ import { BrandCard } from "../components/BrandCard";
 import { FeaturedCarousel } from "../components/FeaturedCarousel";
 import { ClientsTimeline } from "../components/ClientsTimeline";
 import { OurTeam } from "../components/OurTeam";
+import { CustomerReviews } from "../components/CustomerReviews";
 import { useClients } from "@/shared/hooks/useClients";
 import { useTeamMembers } from "@/shared/hooks/useTeam";
+import { useReviews } from "@/shared/hooks/useReviews";
 import { Reveal } from "@/shared/components/Reveal";
 import type { BlanketWithImages } from "@/shared/types/models";
 
@@ -48,6 +50,7 @@ export function HomePage() {
   const { data: settings } = useSettings();
   const { data: clients } = useClients();
   const { data: team } = useTeamMembers();
+  const { data: reviews } = useReviews();
 
   const allBlankets: { blanket: BlanketWithImages; brand: string }[] =
     (brands ?? []).flatMap((b) =>
@@ -217,6 +220,9 @@ export function HomePage() {
 
       {/* Clients timeline */}
       <ClientsTimeline clients={clients ?? []} />
+
+      {/* Customer reviews — collected via the Contact page */}
+      <CustomerReviews reviews={reviews ?? []} />
 
       {/* CTA banner */}
       <Reveal as="section" className="container pt-16 pb-20">

@@ -290,6 +290,48 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["process_photos"]["Insert"]>;
         Relationships: [];
       };
+      contact_messages: {
+        Row: {
+          created_at: string;
+          email: string | null;
+          id: string;
+          is_read: boolean;
+          message: string;
+          name: string;
+          phone: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          email?: string | null;
+          id?: string;
+          is_read?: boolean;
+          message: string;
+          name: string;
+          phone?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["contact_messages"]["Insert"]>;
+        Relationships: [];
+      };
+      reviews: {
+        Row: {
+          created_at: string;
+          id: string;
+          is_approved: boolean;
+          message: string;
+          name: string;
+          rating: number;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          is_approved?: boolean;
+          message: string;
+          name: string;
+          rating: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["reviews"]["Insert"]>;
+        Relationships: [];
+      };
       site_settings: {
         Row: {
           about_photo_1_url: string | null;

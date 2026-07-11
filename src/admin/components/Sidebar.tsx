@@ -8,10 +8,12 @@ import {
   Settings,
   BarChart3,
   Building2,
+  Inbox,
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useSettings } from "@/shared/hooks/useSettings";
+import { useContactMessages } from "@/shared/hooks/useMessages";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/shared/components/ui/button";
 
@@ -23,12 +25,15 @@ const items = [
   { to: "/admin/process", label: "Process", icon: Factory, end: false },
   { to: "/admin/production", label: "Production", icon: Truck, end: false },
   { to: "/admin/reports", label: "Reports", icon: BarChart3, end: false },
+  { to: "/admin/messages", label: "Messages", icon: Inbox, end: false },
   { to: "/admin/settings", label: "Website Settings", icon: Settings, end: false },
 ];
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { signOut, session } = useAuth();
   const { data: settings } = useSettings();
+  const { data: messages } = useContactMessages();
+  const unread = (messages ?? []).filter((m) => !m.is_read).length;
 
   return (
     <div className="flex h-full flex-col">
@@ -59,6 +64,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           >
             <item.icon className="h-4 w-4" />
             {item.label}
+            {item.to === "/admin/messages" && unread > 0 && (
+              <span className="ml-auto rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">
+                {unread}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>
