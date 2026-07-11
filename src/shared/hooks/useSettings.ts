@@ -11,6 +11,10 @@ import {
   removeSiteLogo,
   uploadHeroImage,
   removeHeroImage,
+  uploadAboutPhoto1,
+  removeAboutPhoto1,
+  uploadAboutPhoto2,
+  removeAboutPhoto2,
 } from "@/shared/api/settings";
 import type { TablesUpdate } from "@/shared/types/database";
 
@@ -56,6 +60,40 @@ export function useRemoveHeroImage() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (currentUrl: string | null | undefined) => removeHeroImage(currentUrl),
+    onSuccess: (data) => qc.setQueryData(qk.settings, data),
+  });
+}
+
+export function useUploadAboutPhoto1() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { currentUrl: string | null | undefined; file: File }) =>
+      uploadAboutPhoto1(args.currentUrl, args.file),
+    onSuccess: (data) => qc.setQueryData(qk.settings, data),
+  });
+}
+
+export function useRemoveAboutPhoto1() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (currentUrl: string | null | undefined) => removeAboutPhoto1(currentUrl),
+    onSuccess: (data) => qc.setQueryData(qk.settings, data),
+  });
+}
+
+export function useUploadAboutPhoto2() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { currentUrl: string | null | undefined; file: File }) =>
+      uploadAboutPhoto2(args.currentUrl, args.file),
+    onSuccess: (data) => qc.setQueryData(qk.settings, data),
+  });
+}
+
+export function useRemoveAboutPhoto2() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (currentUrl: string | null | undefined) => removeAboutPhoto2(currentUrl),
     onSuccess: (data) => qc.setQueryData(qk.settings, data),
   });
 }
