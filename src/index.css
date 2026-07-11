@@ -64,4 +64,17 @@
   .tl-card:hover {
     transform: rotate(0deg);
   }
+
+  /* Flowing yarn for the Processes page — slides the dash pattern along the
+     stroke so the thread appears to travel through the machines. Dash
+     patterns on .thread-flow strokes should sum to a divisor of 36 so the
+     loop is seamless. */
+  @keyframes thread-flow {
+    to {
+      stroke-dashoffset: -36;
+    }
+  }
+  .thread-flow {
+    animation: thread-flow 1.6s linear infinite;
+  }
 }

@@ -95,7 +95,8 @@ export function useAddProductionEntry() {
 export function useDeleteProductionEntry() {
   const invalidate = useInvalidateProductionEntries();
   return useMutation({
-    mutationFn: (id: string) => deleteProductionEntry(id),
+    mutationFn: (entry: { id: string; invoice_path: string | null }) =>
+      deleteProductionEntry(entry),
     onSuccess: invalidate,
   });
 }

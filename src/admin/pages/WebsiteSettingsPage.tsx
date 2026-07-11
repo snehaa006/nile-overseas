@@ -14,6 +14,7 @@ import { BrandLogoManager } from "@/admin/components/BrandLogoManager";
 import { SiteLogoManager } from "@/admin/components/SiteLogoManager";
 import { HeroImageManager } from "@/admin/components/HeroImageManager";
 import { TeamManager } from "@/admin/components/TeamManager";
+import { ProcessPhotoManager } from "@/admin/components/ProcessPhotoManager";
 
 const schema = z.object({
   company_name: z.string().min(1, "Company name is required"),
@@ -143,10 +144,24 @@ export function WebsiteSettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Our Team</CardTitle>
+          <CardTitle className="text-base">Process photos</CardTitle>
           <p className="text-sm text-muted-foreground">
-            The people shown in the “Our Team” section at the bottom of the Home
-            page. Add a photo, name, role and short description for each person.
+            A photo for each stage of the “How It's Made” page, shown alongside
+            the step's description.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <ProcessPhotoManager />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Ownership &amp; Management</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            The people shown in the “Ownership and management” section at the
+            bottom of the Home page. Add a photo, name, role and short
+            description for each person.
           </p>
         </CardHeader>
         <CardContent>
