@@ -1,7 +1,12 @@
 import { Award, Factory, HeartHandshake, Sparkles } from "lucide-react";
 import { useSettings } from "@/shared/hooks/useSettings";
 import { useCatalogue } from "@/shared/hooks/useCatalogue";
+import { useClients } from "@/shared/hooks/useClients";
+import { useTeamMembers } from "@/shared/hooks/useTeam";
 import { Reveal } from "@/shared/components/Reveal";
+import { TeamCollage } from "../components/TeamCollage";
+import { StatsShowcase } from "../components/StatsShowcase";
+import { QuoteAndPhotos } from "../components/QuoteAndPhotos";
 import { brandLogo } from "../lib/brandLogos";
 
 const BRAND_BLURBS: Record<string, string> = {
@@ -14,63 +19,86 @@ const BRAND_BLURBS: Record<string, string> = {
 export function AboutPage() {
   const { data: s } = useSettings();
   const { data: brands } = useCatalogue();
+  const { data: clients } = useClients();
+  const { data: team } = useTeamMembers();
 
   const establishedYear = s?.established_year ?? 2014;
   const yearsOfCraft = new Date().getFullYear() - establishedYear;
+  const totalBlankets = (brands ?? []).reduce((n, b) => n + b.blankets.length, 0);
 
   return (
-    <div className="container max-w-4xl py-16">
-      <div className="animate-fade-in-up">
-        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-          <Award className="h-3 w-3" /> Est. {establishedYear}
-        </span>
-        <h1 className="mt-4 font-serif text-4xl font-bold text-primary">
-          About {s?.company_name ?? "Nile Overseas"}
-        </h1>
+    <>
+      <div className="container max-w-4xl py-16">
+        <div className="animate-fade-in-up">
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            <Award className="h-3 w-3" /> Est. {establishedYear}
+          </span>
+          <h1 className="mt-4 font-serif text-4xl font-bold text-primary">
+            About {s?.company_name ?? "Nile Overseas"}
+          </h1>
+        </div>
+
+        <div
+          className="prose mt-8 max-w-none animate-fade-in-up text-muted-foreground"
+          style={{ animationDelay: "100ms" }}
+        >
+          <p className="whitespace-pre-line text-lg leading-relaxed">
+            {s?.about_text ??
+              `Nile Overseas is a blanket manufacturing company producing premium blankets under the CloudNine and Paris Royale DRJ brands. Since ${establishedYear}, we've combined traditional craftsmanship with modern manufacturing to deliver warmth, softness and durability.`}
+          </p>
+        </div>
+
+        {/* Stat row */}
+        <Reveal delay={150} className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <StatCard icon={Award} value={`${establishedYear}`} label="Founded" />
+          <StatCard icon={Sparkles} value={`${yearsOfCraft}+`} label="Years of Craft" />
+          <StatCard icon={Factory} value={`${brands?.length ?? 2}`} label="Brands" />
+          <StatCard icon={HeartHandshake} value="Pan-India" label="Delivery" />
+        </Reveal>
+
+        <div className="mt-12 grid gap-6 sm:grid-cols-2">
+          {(brands ?? []).map((brand, i) => {
+            const logo = brandLogo(brand.name, brand.logo_url);
+            return (
+              <Reveal key={brand.id} delay={i * 100}>
+                <div className="flex flex-col rounded-xl border bg-card p-6 transition-all duration-300 ease-smooth hover:-translate-y-1 hover:shadow-lg">
+                  {logo && (
+                    <img
+                      src={logo}
+                      alt={`${brand.name} logo`}
+                      className="mb-3 h-12 w-auto object-contain"
+                      loading="lazy"
+                    />
+                  )}
+                  <h3 className="font-serif text-2xl font-bold text-primary">{brand.name}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {BRAND_BLURBS[brand.name] ?? brand.description ?? "Explore the range."}
+                  </p>
+                </div>
+              </Reveal>
+            );
+          })}
+        </div>
       </div>
 
-      <div
-        className="prose mt-8 max-w-none animate-fade-in-up text-muted-foreground"
-        style={{ animationDelay: "100ms" }}
-      >
-        <p className="whitespace-pre-line text-lg leading-relaxed">
-          {s?.about_text ??
-            `Nile Overseas is a blanket manufacturing company producing premium blankets under the CloudNine and Paris Royale DRJ brands. Since ${establishedYear}, we've combined traditional craftsmanship with modern manufacturing to deliver warmth, softness and durability.`}
-        </p>
-      </div>
+      <TeamCollage
+        members={team ?? []}
+        settings={s}
+        establishedYear={establishedYear}
+        yearsOfCraft={yearsOfCraft}
+        brandCount={brands?.length ?? 0}
+      />
 
-      {/* Stat row */}
-      <Reveal delay={150} className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard icon={Award} value={`${establishedYear}`} label="Founded" />
-        <StatCard icon={Sparkles} value={`${yearsOfCraft}+`} label="Years of Craft" />
-        <StatCard icon={Factory} value={`${brands?.length ?? 2}`} label="Brands" />
-        <StatCard icon={HeartHandshake} value="Pan-India" label="Delivery" />
-      </Reveal>
+      <StatsShowcase
+        companyName={s?.company_name ?? "Nile Overseas"}
+        blanketVarieties={totalBlankets}
+        clientsServed={clients?.length ?? 0}
+        yearsOfCraft={yearsOfCraft}
+        brandCount={brands?.length ?? 0}
+      />
 
-      <div className="mt-12 grid gap-6 sm:grid-cols-2">
-        {(brands ?? []).map((brand, i) => {
-          const logo = brandLogo(brand.name, brand.logo_url);
-          return (
-            <Reveal key={brand.id} delay={i * 100}>
-              <div className="flex flex-col rounded-xl border bg-card p-6 transition-all duration-300 ease-smooth hover:-translate-y-1 hover:shadow-lg">
-                {logo && (
-                  <img
-                    src={logo}
-                    alt={`${brand.name} logo`}
-                    className="mb-3 h-12 w-auto object-contain"
-                    loading="lazy"
-                  />
-                )}
-                <h3 className="font-serif text-2xl font-bold text-primary">{brand.name}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {BRAND_BLURBS[brand.name] ?? brand.description ?? "Explore the range."}
-                </p>
-              </div>
-            </Reveal>
-          );
-        })}
-      </div>
-    </div>
+      <QuoteAndPhotos settings={s} />
+    </>
   );
 }
 

@@ -111,6 +111,77 @@ export async function removeHeroImage(currentUrl: string | null | undefined): Pr
   return data;
 }
 
+/** Upload (or replace) the wide "work" photo shown in the About page quote section. */
+export async function uploadAboutPhoto1(currentUrl: string | null | undefined, file: File): Promise<SiteSettings> {
+  return uploadAboutPhoto("about_photo_1_url", currentUrl, file);
+}
+
+export async function removeAboutPhoto1(currentUrl: string | null | undefined): Promise<SiteSettings> {
+  return removeAboutPhoto("about_photo_1_url", currentUrl);
+}
+
+/** Upload (or replace) the narrow portrait photo shown in the About page quote section. */
+export async function uploadAboutPhoto2(currentUrl: string | null | undefined, file: File): Promise<SiteSettings> {
+  return uploadAboutPhoto("about_photo_2_url", currentUrl, file);
+}
+
+export async function removeAboutPhoto2(currentUrl: string | null | undefined): Promise<SiteSettings> {
+  return removeAboutPhoto("about_photo_2_url", currentUrl);
+}
+
+async function uploadAboutPhoto(
+  column: "about_photo_1_url" | "about_photo_2_url",
+  currentUrl: string | null | undefined,
+  file: File,
+): Promise<SiteSettings> {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const path = `site/${column}-${crypto.randomUUID()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(LOGO_BUCKET)
+    .upload(path, file, { cacheControl: "3600", upsert: false });
+  if (uploadError) throw uploadError;
+
+  const publicUrl = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path).data.publicUrl;
+  const previousPath = currentUrl ? storagePathFromUrl(currentUrl) : null;
+
+  const update: TablesUpdate<"site_settings"> =
+    column === "about_photo_1_url" ? { about_photo_1_url: publicUrl } : { about_photo_2_url: publicUrl };
+  const { data, error } = await supabase
+    .from("site_settings")
+    .update(update)
+    .eq("id", 1)
+    .select()
+    .single();
+  if (error) {
+    await supabase.storage.from(LOGO_BUCKET).remove([path]);
+    throw error;
+  }
+
+  if (previousPath) await supabase.storage.from(LOGO_BUCKET).remove([previousPath]);
+  return data;
+}
+
+async function removeAboutPhoto(
+  column: "about_photo_1_url" | "about_photo_2_url",
+  currentUrl: string | null | undefined,
+): Promise<SiteSettings> {
+  const path = currentUrl ? storagePathFromUrl(currentUrl) : null;
+
+  const update: TablesUpdate<"site_settings"> =
+    column === "about_photo_1_url" ? { about_photo_1_url: null } : { about_photo_2_url: null };
+  const { data, error } = await supabase
+    .from("site_settings")
+    .update(update)
+    .eq("id", 1)
+    .select()
+    .single();
+  if (error) throw error;
+
+  if (path) await supabase.storage.from(LOGO_BUCKET).remove([path]);
+  return data;
+}
+
 function storagePathFromUrl(url: string): string | null {
   const marker = `/${LOGO_BUCKET}/`;
   const idx = url.indexOf(marker);

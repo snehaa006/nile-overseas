@@ -13,6 +13,7 @@ import { LoadingState, Spinner } from "@/shared/components/StateViews";
 import { BrandLogoManager } from "@/admin/components/BrandLogoManager";
 import { SiteLogoManager } from "@/admin/components/SiteLogoManager";
 import { HeroImageManager } from "@/admin/components/HeroImageManager";
+import { AboutPhotosManager } from "@/admin/components/AboutPhotosManager";
 import { TeamManager } from "@/admin/components/TeamManager";
 
 const schema = z.object({
@@ -138,6 +139,18 @@ export function WebsiteSettingsPage() {
         </CardHeader>
         <CardContent>
           <BrandLogoManager />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">About page photos</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            The two photos shown alongside the quote on the public About page.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <AboutPhotosManager />
         </CardContent>
       </Card>
 

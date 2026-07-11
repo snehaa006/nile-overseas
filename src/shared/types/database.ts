@@ -276,6 +276,8 @@ export type Database = {
       };
       site_settings: {
         Row: {
+          about_photo_1_url: string | null;
+          about_photo_2_url: string | null;
           about_text: string | null;
           address: string | null;
           company_name: string;
@@ -290,6 +292,8 @@ export type Database = {
           whatsapp: string | null;
         };
         Insert: {
+          about_photo_1_url?: string | null;
+          about_photo_2_url?: string | null;
           about_text?: string | null;
           address?: string | null;
           company_name?: string;
