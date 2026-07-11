@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { FileText, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   useAgents,
@@ -30,6 +30,7 @@ import {
 import { LoadingState, ErrorState, EmptyState, Spinner } from "@/shared/components/StateViews";
 import { dateKey, formatCurrency, formatDate, formatMonth, formatNumber, formatYear } from "@/shared/utils/format";
 import type { Agent, Customer } from "@/shared/types/models";
+import { getInvoiceUrl } from "@/shared/api/production";
 import type { PartyPeriodRow, PeriodKind, ProductionEntryRow } from "@/shared/api/production";
 
 export function ProductionPage() {
@@ -57,12 +58,26 @@ export function ProductionPage() {
     return [...map.entries()].sort(([a], [b]) => b.localeCompare(a));
   }, [entries.data]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (entry: ProductionEntryRow) => {
     try {
-      await deleteEntry.mutateAsync(id);
+      await deleteEntry.mutateAsync(entry);
       toast.success("Entry removed");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to remove");
+    }
+  };
+
+  // The invoices bucket is private, so open a fresh signed URL on demand. The
+  // tab is opened synchronously (before the await) to dodge popup blockers.
+  const handleViewInvoice = async (path: string) => {
+    const tab = window.open("about:blank", "_blank", "noopener");
+    try {
+      const url = await getInvoiceUrl(path);
+      if (tab) tab.location.href = url;
+      else window.location.href = url;
+    } catch (err) {
+      tab?.close();
+      toast.error(err instanceof Error ? err.message : "Failed to open invoice");
     }
   };
 
@@ -130,6 +145,7 @@ export function ProductionPage() {
                       <TableHeader>
                         <TableRow className="bg-muted/60 hover:bg-muted/60">
                           <TableHead className="font-bold text-foreground">Date</TableHead>
+                          <TableHead className="font-bold text-foreground">Invoice</TableHead>
                           <TableHead className="font-bold text-foreground">Agent</TableHead>
                           <TableHead className="font-bold text-foreground">Customer</TableHead>
                           <TableHead className="text-right font-bold text-foreground">Amount</TableHead>
@@ -141,6 +157,20 @@ export function ProductionPage() {
                           <TableRow key={e.id}>
                             <TableCell className="whitespace-nowrap py-3 text-muted-foreground">
                               {formatDate(e.date)}
+                            </TableCell>
+                            <TableCell className="py-3">
+                              {e.invoice_path ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 gap-1.5 px-2 text-accent hover:text-accent"
+                                  onClick={() => handleViewInvoice(e.invoice_path!)}
+                                >
+                                  <FileText className="h-4 w-4" /> PDF
+                                </Button>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
                             </TableCell>
                             <TableCell className="py-3 font-medium">
                               {e.agent_name ?? <span className="text-muted-foreground">—</span>}
@@ -156,7 +186,7 @@ export function ProductionPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                onClick={() => handleDelete(e.id)}
+                                onClick={() => handleDelete(e)}
                                 disabled={deleteEntry.isPending}
                                 aria-label="Delete entry"
                               >
@@ -286,6 +316,27 @@ function AddProductionEntryDialog({
   const [agentId, setAgentId] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [amount, setAmount] = useState("");
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const invoiceInputRef = useRef<HTMLInputElement>(null);
+
+  const handleInvoicePick = (files: FileList | null) => {
+    const file = files?.[0] ?? null;
+    if (!file) {
+      setInvoiceFile(null);
+      return;
+    }
+    if (file.type !== "application/pdf") {
+      toast.error(`${file.name} is not a PDF`);
+      if (invoiceInputRef.current) invoiceInputRef.current.value = "";
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(`${file.name} exceeds 10 MB`);
+      if (invoiceInputRef.current) invoiceInputRef.current.value = "";
+      return;
+    }
+    setInvoiceFile(file);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -295,6 +346,7 @@ function AddProductionEntryDialog({
         agent_id: agentId,
         customer_id: customerId,
         amount: Number(amount || 0),
+        invoiceFile,
       });
       toast.success("Entry added");
       onClose();
@@ -313,6 +365,18 @@ function AddProductionEntryDialog({
           <div className="space-y-1.5">
             <Label>Date</Label>
             <DatePicker value={date} onChange={setDate} className="w-full" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="invoice">Invoice PDF (optional)</Label>
+            <Input
+              id="invoice"
+              ref={invoiceInputRef}
+              type="file"
+              accept="application/pdf"
+              onChange={(e) => handleInvoicePick(e.target.files)}
+              className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1 file:text-sm file:font-medium file:text-secondary-foreground"
+            />
+            <p className="text-xs text-muted-foreground">Attach the invoice for this dispatch, up to 10 MB.</p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="agent">Agent</Label>

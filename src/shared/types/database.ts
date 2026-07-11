@@ -245,6 +245,7 @@ export type Database = {
           customer_id: string | null;
           date: string;
           id: string;
+          invoice_path: string | null;
           updated_at: string;
         };
         Insert: {
@@ -254,6 +255,7 @@ export type Database = {
           customer_id?: string | null;
           date: string;
           id?: string;
+          invoice_path?: string | null;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["production_entries"]["Insert"]>;
@@ -273,6 +275,20 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      process_photos: {
+        Row: {
+          image_url: string | null;
+          step: string;
+          updated_at: string;
+        };
+        Insert: {
+          image_url?: string | null;
+          step: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["process_photos"]["Insert"]>;
+        Relationships: [];
       };
       site_settings: {
         Row: {

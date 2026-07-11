@@ -244,7 +244,7 @@ export function HomePage() {
         </div>
       </Reveal>
 
-      {/* Our Team — closing section, managed from Website Settings */}
+      {/* Ownership and management — closing section, managed from Website Settings */}
       <OurTeam members={team ?? []} />
     </>
   );
