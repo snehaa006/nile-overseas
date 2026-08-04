@@ -1,25 +1,38 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { CircleSlash, Pencil, Plus, Trash2, UserRound } from "lucide-react";
 import {
   useAttendance,
+  useAttendanceMonth,
   useClearAttendance,
   useDeleteEmployee,
   useEmployees,
   useMarkAllAttendance,
   useMarkAttendance,
+  usePayrollMonth,
+  useSavePayrollMonth,
+  useSetOvertime,
 } from "@/shared/hooks/useHr";
 import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
 import { DatePicker } from "@/shared/components/ui/date-picker";
+import { MonthPicker } from "@/shared/components/ui/month-picker";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
 import { LoadingState, ErrorState, EmptyState, Spinner } from "@/shared/components/StateViews";
-import { dateKey, formatCurrency } from "@/shared/utils/format";
+import { dateKey, formatCurrency, formatCurrencyExact } from "@/shared/utils/format";
 import { cn } from "@/shared/utils/cn";
-import type { AttendanceStatus, Employee } from "@/shared/types/models";
+import {
+  calcPayroll,
+  DEFAULT_WORKING_DAYS,
+  type AttendanceRecord,
+  type AttendanceStatus,
+  type Employee,
+} from "@/shared/types/models";
 
 /** Workforce roster plus day-by-day attendance marking. */
 export function HrPage() {
@@ -38,6 +51,7 @@ export function HrPage() {
         <TabsList>
           <TabsTrigger value="workers">Workers</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
+          <TabsTrigger value="payroll">Payroll</TabsTrigger>
         </TabsList>
 
         <TabsContent value="workers">
@@ -45,6 +59,9 @@ export function HrPage() {
         </TabsContent>
         <TabsContent value="attendance">
           <AttendanceTab />
+        </TabsContent>
+        <TabsContent value="payroll">
+          <PayrollTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -221,15 +238,16 @@ function AttendanceTab() {
   const { data: records } = useAttendance(date);
   const markAll = useMarkAllAttendance(date);
 
-  const statusById = useMemo(() => {
-    const map = new Map<string, AttendanceStatus>();
-    for (const record of records ?? []) map.set(record.employee_id, record.status);
+  const recordById = useMemo(() => {
+    const map = new Map<string, AttendanceRecord>();
+    for (const record of records ?? []) map.set(record.employee_id, record);
     return map;
   }, [records]);
 
   const roster = employees ?? [];
-  const present = roster.filter((e) => statusById.get(e.id) === "present").length;
-  const absent = roster.filter((e) => statusById.get(e.id) === "absent").length;
+  const statusOf = (id: string) => recordById.get(id)?.status;
+  const present = roster.filter((e) => statusOf(e.id) === "present").length;
+  const absent = roster.filter((e) => statusOf(e.id) === "absent").length;
   const unmarked = roster.length - present - absent;
 
   const handleMarkAll = async (status: AttendanceStatus) => {
@@ -289,6 +307,7 @@ function AttendanceTab() {
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead>Worker</TableHead>
                   <TableHead>Designation</TableHead>
+                  <TableHead className="w-[1%] text-center">OT hrs</TableHead>
                   <TableHead className="w-[1%] text-right">P / A</TableHead>
                 </TableRow>
               </TableHeader>
@@ -298,7 +317,7 @@ function AttendanceTab() {
                     key={employee.id}
                     employee={employee}
                     date={date}
-                    status={statusById.get(employee.id)}
+                    record={recordById.get(employee.id)}
                   />
                 ))}
               </TableBody>
@@ -313,12 +332,13 @@ function AttendanceTab() {
 function AttendanceRow({
   employee,
   date,
-  status,
+  record,
 }: {
   employee: Employee;
   date: string;
-  status?: AttendanceStatus;
+  record?: AttendanceRecord;
 }) {
+  const status = record?.status;
   const mark = useMarkAttendance(date);
   const clear = useClearAttendance(date);
   const busy = mark.isPending || clear.isPending;
@@ -344,6 +364,14 @@ function AttendanceRow({
         <EmployeeCell employee={employee} />
       </TableCell>
       <TableCell className="text-muted-foreground">{employee.designation}</TableCell>
+      <TableCell className="text-center">
+        <OvertimeInput
+          date={date}
+          employeeId={employee.id}
+          hours={record?.overtime_hours ?? 0}
+          enabled={status === "present"}
+        />
+      </TableCell>
       <TableCell>
         <div className="flex items-center justify-end gap-2">
           {!status && (
@@ -370,6 +398,221 @@ function AttendanceRow({
         </div>
       </TableCell>
     </TableRow>
+  );
+}
+
+/* ------------------------------- Payroll -------------------------------- */
+
+function PayrollTab() {
+  const [month, setMonth] = useState(dateKey().slice(0, 7));
+  const { data: employees, isLoading, isError, error, refetch } = useEmployees();
+  const { data: records } = useAttendanceMonth(month);
+  const { data: payrollMonth } = usePayrollMonth(month);
+
+  const workingDays = payrollMonth?.working_days ?? DEFAULT_WORKING_DAYS;
+  const roster = employees ?? [];
+
+  const rows = useMemo(() => {
+    const tally = new Map(
+      roster.map((e) => [e.id, { present: 0, absent: 0, overtime: 0 }]),
+    );
+    for (const record of records ?? []) {
+      const entry = tally.get(record.employee_id);
+      if (!entry) continue;
+      if (record.status === "present") entry.present += 1;
+      else entry.absent += 1;
+      entry.overtime += Number(record.overtime_hours);
+    }
+    return roster.map((employee) => {
+      const entry = tally.get(employee.id) ?? { present: 0, absent: 0, overtime: 0 };
+      return calcPayroll({
+        employee,
+        workingDays,
+        presentDays: entry.present,
+        absentDays: entry.absent,
+        overtimeHours: entry.overtime,
+      });
+    });
+  }, [roster, records, workingDays]);
+
+  const totalPay = rows.reduce((sum, r) => sum + r.totalPay, 0);
+  const totalOvertime = rows.reduce((sum, r) => sum + r.overtimeHours, 0);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <MonthPicker value={month} onChange={setMonth} />
+        <WorkingDaysField month={month} workingDays={workingDays} />
+      </div>
+
+      {isLoading ? (
+        <LoadingState />
+      ) : isError ? (
+        <ErrorState error={error} onRetry={refetch} />
+      ) : roster.length === 0 ? (
+        <EmptyState title="No workers yet" description="Add a worker first." />
+      ) : (
+        <>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Tile label="Working days" value={workingDays} />
+            <Tile label="Overtime hours" value={totalOvertime} />
+            <Tile label="Payable" value={formatCurrency(totalPay)} />
+          </div>
+
+          <div className="overflow-hidden rounded-xl border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead>Worker</TableHead>
+                  <TableHead className="text-right">Present</TableHead>
+                  <TableHead className="text-right">Day rate</TableHead>
+                  <TableHead className="text-right">Hourly</TableHead>
+                  <TableHead className="text-right">OT hrs</TableHead>
+                  <TableHead className="text-right">OT pay</TableHead>
+                  <TableHead className="text-right">Payable</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.employee.id}>
+                    <TableCell>
+                      <EmployeeCell employee={row.employee} />
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {row.presentDays}
+                      <span className="text-muted-foreground">/{workingDays}</span>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {formatCurrencyExact(row.dayRate)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {formatCurrencyExact(row.hourlyRate)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {row.overtimeHours || "—"}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {row.overtimePay ? formatCurrencyExact(row.overtimePay) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold tabular-nums">
+                      {formatCurrencyExact(row.totalPay)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableCell colSpan={6} className="font-medium">
+                    Total
+                  </TableCell>
+                  <TableCell className="text-right font-bold tabular-nums">
+                    {formatCurrencyExact(totalPay)}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Working days drive the day rate, so they're set per month, not guessed. */
+function WorkingDaysField({
+  month,
+  workingDays,
+}: {
+  month: string;
+  workingDays: number;
+}) {
+  const save = useSavePayrollMonth(month);
+  const [value, setValue] = useState(String(workingDays));
+
+  useEffect(() => setValue(String(workingDays)), [workingDays, month]);
+
+  const commit = async () => {
+    const next = Number(value);
+    if (!Number.isInteger(next) || next < 1 || next > 31) {
+      toast.error("Working days must be between 1 and 31");
+      setValue(String(workingDays));
+      return;
+    }
+    if (next === workingDays) return;
+    try {
+      await save.mutateAsync(next);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save");
+      setValue(String(workingDays));
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Label htmlFor="working-days" className="text-sm text-muted-foreground">
+        Working days
+      </Label>
+      <Input
+        id="working-days"
+        type="number"
+        min={1}
+        max={31}
+        value={value}
+        disabled={save.isPending}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+        className="h-9 w-20 text-center tabular-nums"
+      />
+    </div>
+  );
+}
+
+/** Overtime is only meaningful on a day the worker actually turned up. */
+function OvertimeInput({
+  date,
+  employeeId,
+  hours,
+  enabled,
+}: {
+  date: string;
+  employeeId: string;
+  hours: number;
+  enabled: boolean;
+}) {
+  const setOvertime = useSetOvertime(date);
+  const [value, setValue] = useState(String(hours));
+
+  useEffect(() => setValue(String(hours)), [hours]);
+
+  const commit = async () => {
+    const next = Number(value || 0);
+    if (!Number.isFinite(next) || next < 0 || next > 24) {
+      toast.error("Overtime must be between 0 and 24 hours");
+      setValue(String(hours));
+      return;
+    }
+    if (next === Number(hours)) return;
+    try {
+      await setOvertime.mutateAsync({ employeeId, hours: next });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save overtime");
+      setValue(String(hours));
+    }
+  };
+
+  return (
+    <Input
+      type="number"
+      min={0}
+      max={24}
+      step="0.5"
+      value={enabled ? value : ""}
+      disabled={!enabled || setOvertime.isPending}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+      className="mx-auto h-9 w-20 text-center tabular-nums"
+      placeholder={enabled ? "0" : "—"}
+    />
   );
 }
 

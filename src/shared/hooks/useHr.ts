@@ -5,10 +5,14 @@ import {
   createEmployee,
   deleteEmployee,
   fetchAttendance,
+  fetchAttendanceRange,
   fetchEmployee,
   fetchEmployees,
   markAllAttendance,
   markAttendance,
+  fetchPayrollMonth,
+  savePayrollMonth,
+  setOvertime,
   updateEmployee,
 } from "@/shared/api/hr";
 import type { AttendanceStatus } from "@/shared/types/models";
@@ -70,7 +74,11 @@ export function useAttendance(date: string) {
 
 function useInvalidateAttendance(date: string) {
   const qc = useQueryClient();
-  return () => qc.invalidateQueries({ queryKey: qk.attendanceDay(date) });
+  return () => {
+    qc.invalidateQueries({ queryKey: qk.attendanceDay(date) });
+    // The payroll view sums the whole month, so it goes stale too.
+    qc.invalidateQueries({ queryKey: qk.attendanceMonth(date.slice(0, 7)) });
+  };
 }
 
 export function useMarkAttendance(date: string) {
@@ -97,4 +105,51 @@ export function useMarkAllAttendance(date: string) {
       markAllAttendance({ ...args, date }),
     onSuccess: invalidate,
   });
+}
+
+/* -------------------------------- Payroll ------------------------------- */
+
+/** Attendance for a whole month — "YYYY-MM-01" through month end. */
+export function useAttendanceMonth(month: string) {
+  const from = `${month}-01`;
+  const to = monthEnd(month);
+  return useQuery({
+    queryKey: qk.attendanceMonth(month),
+    queryFn: () => fetchAttendanceRange(from, to),
+  });
+}
+
+export function usePayrollMonth(month: string) {
+  return useQuery({
+    queryKey: qk.payrollMonth(month),
+    queryFn: () => fetchPayrollMonth(`${month}-01`),
+  });
+}
+
+export function useSavePayrollMonth(month: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (workingDays: number) =>
+      savePayrollMonth(`${month}-01`, workingDays),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.payrollMonth(month) }),
+  });
+}
+
+export function useSetOvertime(date: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { employeeId: string; hours: number }) =>
+      setOvertime({ ...args, date }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.attendanceDay(date) });
+      qc.invalidateQueries({ queryKey: qk.attendanceMonth(date.slice(0, 7)) });
+    },
+  });
+}
+
+/** "2026-08" -> "2026-08-31" */
+function monthEnd(month: string): string {
+  const year = Number(month.slice(0, 4));
+  const m = Number(month.slice(5, 7));
+  return `${month}-${String(new Date(year, m, 0).getDate()).padStart(2, "0")}`;
 }

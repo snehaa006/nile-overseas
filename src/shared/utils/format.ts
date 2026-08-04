@@ -12,6 +12,17 @@ export const formatCurrency = (value: number | null | undefined): string =>
 export const formatNumber = (value: number | null | undefined): string =>
   NUM.format(Number(value ?? 0));
 
+const INR_PAISE = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/** Currency with paise — day and hourly rates rarely land on whole rupees. */
+export const formatCurrencyExact = (value: number | null | undefined): string =>
+  INR_PAISE.format(Number(value ?? 0));
+
 export const formatWeight = (kg: number | null | undefined): string =>
   `${NUM.format(Number(kg ?? 0))} kg`;
 

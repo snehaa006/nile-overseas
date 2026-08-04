@@ -321,6 +321,7 @@ export type Database = {
           is_active: boolean;
           name: string;
           salary: number;
+          shift_hours: number;
         };
         Insert: {
           created_at?: string;
@@ -330,6 +331,7 @@ export type Database = {
           is_active?: boolean;
           name: string;
           salary?: number;
+          shift_hours?: number;
         };
         Update: Partial<Database["public"]["Tables"]["employees"]["Insert"]>;
         Relationships: [];
@@ -339,6 +341,7 @@ export type Database = {
           created_at: string;
           employee_id: string;
           id: string;
+          overtime_hours: number;
           status: "present" | "absent";
           work_date: string;
         };
@@ -346,10 +349,25 @@ export type Database = {
           created_at?: string;
           employee_id: string;
           id?: string;
+          overtime_hours?: number;
           status: "present" | "absent";
           work_date: string;
         };
         Update: Partial<Database["public"]["Tables"]["attendance"]["Insert"]>;
+        Relationships: [];
+      };
+      payroll_months: {
+        Row: {
+          created_at: string;
+          month: string;
+          working_days: number;
+        };
+        Insert: {
+          created_at?: string;
+          month: string;
+          working_days: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["payroll_months"]["Insert"]>;
         Relationships: [];
       };
       reviews: {

@@ -22,6 +22,10 @@ const schema = z.object({
   name: z.string().min(2, "Name is required"),
   designation: z.string().min(2, "Designation is required"),
   salary: z.coerce.number().nonnegative("Salary can't be negative"),
+  shift_hours: z.coerce
+    .number()
+    .positive("Shift must be more than 0")
+    .max(24, "Shift can't exceed 24 hours"),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -39,7 +43,7 @@ export function WorkerEditorPage() {
     register, handleSubmit, reset, formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", designation: "", salary: 0 },
+    defaultValues: { name: "", designation: "", salary: 0, shift_hours: 12 },
   });
 
   useEffect(() => {
@@ -48,6 +52,7 @@ export function WorkerEditorPage() {
         name: existing.name,
         designation: existing.designation,
         salary: existing.salary,
+        shift_hours: existing.shift_hours,
       });
     }
   }, [existing, reset]);
@@ -127,6 +132,23 @@ export function WorkerEditorPage() {
                 />
                 {errors.salary && (
                   <p className="text-xs text-destructive">{errors.salary.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="shift_hours">Shift hours per day</Label>
+                <Input
+                  id="shift_hours"
+                  type="number"
+                  min={1}
+                  max={24}
+                  step="0.5"
+                  {...register("shift_hours")}
+                />
+                {errors.shift_hours && (
+                  <p className="text-xs text-destructive">
+                    {errors.shift_hours.message}
+                  </p>
                 )}
               </div>
             </div>
