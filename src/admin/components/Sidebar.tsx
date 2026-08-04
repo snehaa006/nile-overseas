@@ -8,6 +8,7 @@ import {
   Settings,
   BarChart3,
   Building2,
+  Users,
   Inbox,
   LogOut,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const items = [
   { to: "/admin/stock", label: "Stock", icon: Boxes, end: false },
   { to: "/admin/process", label: "Process", icon: Factory, end: false },
   { to: "/admin/production", label: "Production", icon: Truck, end: false },
+  { to: "/admin/hr", label: "HR", icon: Users, end: false },
   { to: "/admin/reports", label: "Reports", icon: BarChart3, end: false },
   { to: "/admin/messages", label: "Messages", icon: Inbox, end: false },
   { to: "/admin/settings", label: "Website Settings", icon: Settings, end: false },

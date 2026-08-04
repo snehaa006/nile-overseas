@@ -13,6 +13,10 @@ export type Client = Tables<"clients">;
 export type TeamMember = Tables<"team_members">;
 export type Review = Tables<"reviews">;
 export type ContactMessage = Tables<"contact_messages">;
+export type Employee = Tables<"employees">;
+export type AttendanceRecord = Tables<"attendance">;
+/** A worker is either present or absent on a given day — nothing in between. */
+export type AttendanceStatus = AttendanceRecord["status"];
 export type ProductionEntry = Tables<"production_entries">;
 export type SiteSettings = Tables<"site_settings">;
 
