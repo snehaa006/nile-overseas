@@ -88,6 +88,7 @@ RLS is enabled on every table. The model:
 | blanket_images   | read (only for active blankets)  | full |
 | daily_stock      | none                             | full |
 | employees        | none                             | full |
+| payroll_months   | none                             | full |
 | attendance       | none                             | full |
 | site_settings    | read                             | update |
 | storage objects  | read `blanket-images`            | write/delete |
@@ -96,6 +97,9 @@ Server-side invariants (not trusted to the client):
 - **SKU** auto-generated per brand via trigger (`DRJ-001`, race-safe row lock).
 - **Employee ID** auto-issued from a sequence (`EMP-0001`), never client-supplied;
   attendance is unique per worker per day, so a re-mark overwrites rather than duplicates.
+- **Payroll** derives from attendance: `day rate = salary / working days in month`,
+  `hourly = day rate / shift hours`, `pay = present days x day rate + OT hours x hourly`.
+  Working days are stored per month in `payroll_months` (default 26).
 - **Closing stock** is a generated column: `opening + production − sales`.
 - **Opening stock carries forward day to day** via triggers, so monthly and
   yearly totals are just rollups (`blanket_monthly_stock`, `blanket_yearly_stock`)
@@ -164,5 +168,5 @@ Create more admins in Supabase Dashboard → Authentication → Add user.
 | Daily stock entry + lock + monthly/yearly rollups | `StockPage`, `StockRowEditor`, `StockRollupView` |
 | Reports + charts | `ReportsPage.tsx` |
 | CMS (settings) | `WebsiteSettingsPage.tsx` |
-| HR — worker roster + daily attendance | `HrPage.tsx`, `shared/api/hr.ts` |
+| HR — worker roster, daily attendance, payroll | `HrPage.tsx`, `WorkerEditorPage.tsx`, `shared/api/hr.ts` |
 ```

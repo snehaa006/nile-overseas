@@ -1,5 +1,10 @@
 import { supabase } from "@/shared/lib/supabase";
-import type { AttendanceRecord, AttendanceStatus, Employee } from "@/shared/types/models";
+import type {
+  AttendanceRecord,
+  AttendanceStatus,
+  Employee,
+  PayrollMonth,
+} from "@/shared/types/models";
 import type { TablesInsert, TablesUpdate } from "@/shared/types/database";
 
 /** Every worker on the roster, active ones first, then alphabetical. */
@@ -85,6 +90,61 @@ export async function markAttendance(args: {
       },
       { onConflict: "employee_id,work_date" },
     )
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** Every attendance row between two dates, for the monthly payroll view. */
+export async function fetchAttendanceRange(
+  from: string,
+  to: string,
+): Promise<AttendanceRecord[]> {
+  const { data, error } = await supabase
+    .from("attendance")
+    .select("*")
+    .gte("work_date", from)
+    .lte("work_date", to);
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Sets overtime for a day the worker is already marked present. Sent as an
+ * update (not an upsert) so overtime can never conjure an unmarked day.
+ */
+export async function setOvertime(args: {
+  employeeId: string;
+  date: string;
+  hours: number;
+}): Promise<void> {
+  const { error } = await supabase
+    .from("attendance")
+    .update({ overtime_hours: args.hours })
+    .eq("employee_id", args.employeeId)
+    .eq("work_date", args.date);
+  if (error) throw error;
+}
+
+/** The configured working days for a month, or null if never set. */
+export async function fetchPayrollMonth(month: string): Promise<PayrollMonth | null> {
+  const { data, error } = await supabase
+    .from("payroll_months")
+    .select("*")
+    .eq("month", month)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function savePayrollMonth(
+  month: string,
+  workingDays: number,
+): Promise<PayrollMonth> {
+  const { data, error } = await supabase
+    .from("payroll_months")
+    .upsert({ month, working_days: workingDays }, { onConflict: "month" })
     .select()
     .single();
   if (error) throw error;
