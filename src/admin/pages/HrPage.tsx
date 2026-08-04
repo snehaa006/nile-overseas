@@ -1,29 +1,16 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import {
-  BadgeIndianRupee,
-  Check,
-  CircleSlash,
-  Pencil,
-  Plus,
-  Trash2,
-  UserRound,
-  Users,
-  X,
-} from "lucide-react";
+import { CircleSlash, Pencil, Plus, Trash2, UserRound } from "lucide-react";
 import {
   useAttendance,
   useClearAttendance,
-  useCreateEmployee,
   useDeleteEmployee,
   useEmployees,
   useMarkAllAttendance,
   useMarkAttendance,
-  useUpdateEmployee,
 } from "@/shared/hooks/useHr";
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import { Label } from "@/shared/components/ui/label";
 import { DatePicker } from "@/shared/components/ui/date-picker";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/components/ui/tabs";
 import {
@@ -38,12 +25,13 @@ import type { AttendanceStatus, Employee } from "@/shared/types/models";
 export function HrPage() {
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-center justify-between">
         <h1 className="font-serif text-3xl font-bold text-primary">HR</h1>
-        <p className="text-muted-foreground">
-          Your workforce roster and daily attendance. Employee IDs are issued
-          automatically when a worker is added.
-        </p>
+        <Button asChild>
+          <Link to="/admin/hr/new">
+            <Plus className="h-4 w-4" /> Add Worker
+          </Link>
+        </Button>
       </div>
 
       <Tabs defaultValue="workers">
@@ -75,18 +63,12 @@ function initials(name: string): string {
     .join("");
 }
 
-function Avatar({ name }: { name: string }) {
-  return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">
-      {initials(name) || <UserRound className="h-4 w-4" />}
-    </div>
-  );
-}
-
 function EmployeeCell({ employee }: { employee: Employee }) {
   return (
     <div className="flex items-center gap-3">
-      <Avatar name={employee.name} />
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">
+        {initials(employee.name) || <UserRound className="h-4 w-4" />}
+      </div>
       <div className="min-w-0">
         <p className="truncate font-medium">{employee.name}</p>
         <p className="font-mono text-xs text-muted-foreground">
@@ -97,7 +79,7 @@ function EmployeeCell({ employee }: { employee: Employee }) {
   );
 }
 
-/** A compact figure tile — the counts that sit above each tab's table. */
+/** A compact figure tile — the counts above each tab's table. */
 function Tile({
   label,
   value,
@@ -147,206 +129,50 @@ function WorkersTab() {
   const roster = employees ?? [];
   const payroll = roster.reduce((sum, e) => sum + Number(e.salary), 0);
 
+  if (isLoading) return <LoadingState />;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
+  if (roster.length === 0) {
+    return (
+      <EmptyState
+        title="No workers yet"
+        description="Add your first worker to get started."
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <AddWorkerForm />
-
-      {isLoading ? (
-        <LoadingState />
-      ) : isError ? (
-        <ErrorState error={error} onRetry={refetch} />
-      ) : roster.length > 0 ? (
-        <>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex items-center gap-4 rounded-xl border bg-card px-4 py-3">
-              <div className="rounded-lg bg-accent/10 p-2.5 text-accent">
-                <Users className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Workers
-                </p>
-                <p className="text-2xl font-bold text-primary">{roster.length}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 rounded-xl border bg-card px-4 py-3">
-              <div className="rounded-lg bg-accent/10 p-2.5 text-accent">
-                <BadgeIndianRupee className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Monthly payroll
-                </p>
-                <p className="text-2xl font-bold text-primary">
-                  {formatCurrency(payroll)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-xl border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead>Worker</TableHead>
-                  <TableHead>Designation</TableHead>
-                  <TableHead className="text-right">Salary</TableHead>
-                  <TableHead className="w-[1%]" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {roster.map((employee) => (
-                  <WorkerRow key={employee.id} employee={employee} />
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </>
-      ) : (
-        <EmptyState
-          title="No workers yet"
-          description="Add your first worker using the form above."
-        />
-      )}
-    </div>
-  );
-}
-
-function AddWorkerForm() {
-  const create = useCreateEmployee();
-  const [name, setName] = useState("");
-  const [designation, setDesignation] = useState("");
-  const [salary, setSalary] = useState("");
-
-  const handleAdd = async () => {
-    if (!name.trim() || !designation.trim()) {
-      toast.error("Name and designation are required");
-      return;
-    }
-    const amount = Number(salary || 0);
-    if (!Number.isFinite(amount) || amount < 0) {
-      toast.error("Enter a valid salary");
-      return;
-    }
-    try {
-      const employee = await create.mutateAsync({
-        name: name.trim(),
-        designation: designation.trim(),
-        salary: amount,
-      });
-      toast.success(`${employee.name} added as ${employee.employee_code}`);
-      setName("");
-      setDesignation("");
-      setSalary("");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add worker");
-    }
-  };
-
-  return (
-    <div className="rounded-xl border bg-card">
-      <div className="border-b px-4 py-3">
-        <h2 className="font-medium">Add a worker</h2>
-        <p className="text-xs text-muted-foreground">
-          The employee ID (EMP-0001, EMP-0002, …) is generated automatically.
-        </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Tile label="Workers" value={roster.length} />
+        <Tile label="Monthly payroll" value={formatCurrency(payroll)} />
       </div>
-      <div className="flex flex-wrap items-end gap-3 p-4">
-        <div className="min-w-[180px] flex-1">
-          <Label htmlFor="worker-name">Name</Label>
-          <Input
-            id="worker-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Ramesh Kumar"
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          />
-        </div>
-        <div className="min-w-[180px] flex-1">
-          <Label htmlFor="worker-designation">Designation</Label>
-          <Input
-            id="worker-designation"
-            value={designation}
-            onChange={(e) => setDesignation(e.target.value)}
-            placeholder="e.g. Loom Operator"
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          />
-        </div>
-        <div className="min-w-[150px]">
-          <Label htmlFor="worker-salary">Monthly salary (₹)</Label>
-          <Input
-            id="worker-salary"
-            type="number"
-            min={0}
-            step="0.01"
-            value={salary}
-            onChange={(e) => setSalary(e.target.value)}
-            placeholder="0"
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          />
-        </div>
-        <Button onClick={handleAdd} disabled={create.isPending}>
-          {create.isPending ? (
-            <Spinner className="h-4 w-4" />
-          ) : (
-            <Plus className="h-4 w-4" />
-          )}
-          Add Worker
-        </Button>
+
+      <div className="overflow-hidden rounded-xl border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableHead>Worker</TableHead>
+              <TableHead>Designation</TableHead>
+              <TableHead className="text-right">Salary</TableHead>
+              <TableHead className="w-[1%]" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {roster.map((employee) => (
+              <WorkerRow key={employee.id} employee={employee} />
+            ))}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
 }
 
 function WorkerRow({ employee }: { employee: Employee }) {
-  const update = useUpdateEmployee();
   const remove = useDeleteEmployee();
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(employee.name);
-  const [designation, setDesignation] = useState(employee.designation);
-  const [salary, setSalary] = useState(String(employee.salary));
-  const busy = update.isPending || remove.isPending;
-
-  const save = async () => {
-    if (!name.trim() || !designation.trim()) {
-      toast.error("Name and designation are required");
-      return;
-    }
-    const amount = Number(salary || 0);
-    if (!Number.isFinite(amount) || amount < 0) {
-      toast.error("Enter a valid salary");
-      return;
-    }
-    try {
-      await update.mutateAsync({
-        id: employee.id,
-        input: {
-          name: name.trim(),
-          designation: designation.trim(),
-          salary: amount,
-        },
-      });
-      toast.success("Worker updated");
-      setEditing(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Update failed");
-    }
-  };
-
-  const cancel = () => {
-    setName(employee.name);
-    setDesignation(employee.designation);
-    setSalary(String(employee.salary));
-    setEditing(false);
-  };
 
   const handleRemove = async () => {
-    if (
-      !confirm(
-        `Remove ${employee.name} (${employee.employee_code})? Their attendance history will be deleted too.`,
-      )
-    )
-      return;
+    if (!confirm(`Remove ${employee.name} (${employee.employee_code})?`)) return;
     try {
       await remove.mutateAsync(employee.id);
       toast.success(`${employee.name} removed`);
@@ -354,54 +180,6 @@ function WorkerRow({ employee }: { employee: Employee }) {
       toast.error(err instanceof Error ? err.message : "Remove failed");
     }
   };
-
-  if (editing) {
-    return (
-      <TableRow className="bg-muted/30">
-        <TableCell>
-          <div className="flex items-center gap-3">
-            <Avatar name={name || employee.name} />
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && save()}
-              className="h-9"
-              autoFocus
-            />
-          </div>
-        </TableCell>
-        <TableCell>
-          <Input
-            value={designation}
-            onChange={(e) => setDesignation(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && save()}
-            className="h-9"
-          />
-        </TableCell>
-        <TableCell>
-          <Input
-            type="number"
-            min={0}
-            step="0.01"
-            value={salary}
-            onChange={(e) => setSalary(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && save()}
-            className="h-9 text-right"
-          />
-        </TableCell>
-        <TableCell>
-          <div className="flex justify-end gap-1.5">
-            <Button size="icon" title="Save" onClick={save} disabled={busy}>
-              <Check className="h-4 w-4" />
-            </Button>
-            <Button size="icon" variant="outline" title="Cancel" onClick={cancel}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </TableCell>
-      </TableRow>
-    );
-  }
 
   return (
     <TableRow className="group">
@@ -414,14 +192,10 @@ function WorkerRow({ employee }: { employee: Employee }) {
       </TableCell>
       <TableCell>
         <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
-          <Button
-            size="icon"
-            variant="ghost"
-            title="Edit worker"
-            onClick={() => setEditing(true)}
-            disabled={busy}
-          >
-            <Pencil className="h-4 w-4" />
+          <Button size="icon" variant="ghost" title="Edit worker" asChild>
+            <Link to={`/admin/hr/${employee.id}`}>
+              <Pencil className="h-4 w-4" />
+            </Link>
           </Button>
           <Button
             size="icon"
@@ -429,7 +203,7 @@ function WorkerRow({ employee }: { employee: Employee }) {
             title="Remove worker"
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={handleRemove}
-            disabled={busy}
+            disabled={remove.isPending}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -461,9 +235,6 @@ function AttendanceTab() {
   const handleMarkAll = async (status: AttendanceStatus) => {
     try {
       await markAll.mutateAsync({ employeeIds: roster.map((e) => e.id), status });
-      toast.success(
-        status === "present" ? "Everyone marked P" : "Everyone marked A",
-      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to mark attendance");
     }
@@ -503,10 +274,7 @@ function AttendanceTab() {
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : roster.length === 0 ? (
-        <EmptyState
-          title="No workers yet"
-          description="Add workers on the Workers tab before marking attendance."
-        />
+        <EmptyState title="No workers yet" description="Add a worker first." />
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -536,12 +304,6 @@ function AttendanceTab() {
               </TableBody>
             </Table>
           </div>
-
-          <p className="text-xs text-muted-foreground">
-            <span className="font-semibold">P</span> = present,{" "}
-            <span className="font-semibold">A</span> = absent. Tap the highlighted
-            letter again to clear the mark.
-          </p>
         </>
       )}
     </div>
@@ -585,9 +347,7 @@ function AttendanceRow({
       <TableCell>
         <div className="flex items-center justify-end gap-2">
           {!status && (
-            <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
-              <CircleSlash className="h-3.5 w-3.5" /> not marked
-            </span>
+            <CircleSlash className="hidden h-4 w-4 text-muted-foreground sm:block" />
           )}
           <div className="inline-flex overflow-hidden rounded-lg border">
             <MarkButton

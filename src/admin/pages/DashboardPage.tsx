@@ -18,7 +18,6 @@ export function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-serif text-3xl font-bold text-primary">Dashboard</h1>
-          <p className="text-muted-foreground">Overview of your business this month.</p>
         </div>
         <Button asChild>
           <Link to="/admin/products/new">Add Blanket</Link>

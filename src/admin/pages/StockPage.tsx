@@ -168,9 +168,6 @@ export function StockPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-serif text-3xl font-bold text-primary">Stock</h1>
-          <p className="text-muted-foreground">
-            Opening + Production − Sales = Closing. Opening carries forward automatically, day to day.
-          </p>
         </div>
       </div>
 
