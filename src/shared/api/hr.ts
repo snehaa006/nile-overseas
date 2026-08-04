@@ -13,6 +13,16 @@ export async function fetchEmployees(): Promise<Employee[]> {
   return data;
 }
 
+export async function fetchEmployee(id: string): Promise<Employee> {
+  const { data, error } = await supabase
+    .from("employees")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 /**
  * Adds a worker. `employee_code` is deliberately omitted — the database
  * issues the next EMP-#### id so two admins can never collide on one.

@@ -28,11 +28,14 @@ export function MessagesPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h1 className="font-serif text-3xl font-bold text-primary">Messages</h1>
-        <p className="text-muted-foreground">
-          Enquiries sent from the website's Contact page
-          {unread > 0 && ` — ${unread} unread`}.
-        </p>
+        <h1 className="font-serif text-3xl font-bold text-primary">
+          Messages
+          {unread > 0 && (
+            <span className="ml-2 align-middle text-base font-normal text-muted-foreground">
+              {unread} unread
+            </span>
+          )}
+        </h1>
       </div>
 
       {isLoading ? (

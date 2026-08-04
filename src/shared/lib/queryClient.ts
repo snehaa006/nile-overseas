@@ -38,6 +38,7 @@ export const qk = {
   reviewsAll: ["reviews", "all"] as const,
   contactMessages: ["contact-messages"] as const,
   employees: ["employees"] as const,
+  employee: (id: string) => ["employee", id] as const,
   attendanceDay: (date: string) => ["attendance-day", date] as const,
   productionEntries: ["production-entries"] as const,
   agentSummary: (period: "month" | "year") => ["agent-summary", period] as const,

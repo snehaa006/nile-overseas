@@ -34,10 +34,6 @@ export function ClientsAdminPage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-serif text-3xl font-bold text-primary">Clients</h1>
-        <p className="text-muted-foreground">
-          Add the brands you work with — each one appears on the “Our Clients”
-          timeline on the public About page.
-        </p>
       </div>
 
       <AddClientForm nextOrder={clients?.length ?? 0} />

@@ -87,9 +87,6 @@ export function ProductionPage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-serif text-3xl font-bold text-primary">Production</h1>
-        <p className="text-muted-foreground">
-          Track which agent dispatched how much to which customer.
-        </p>
       </div>
 
       <Tabs defaultValue="entries">

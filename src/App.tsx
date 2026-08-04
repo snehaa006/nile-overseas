@@ -22,6 +22,7 @@ import { WebsiteSettingsPage } from "@/admin/pages/WebsiteSettingsPage";
 import { ReportsPage } from "@/admin/pages/ReportsPage";
 import { MessagesPage } from "@/admin/pages/MessagesPage";
 import { HrPage } from "@/admin/pages/HrPage";
+import { WorkerEditorPage } from "@/admin/pages/WorkerEditorPage";
 
 export function App() {
   return (
@@ -56,6 +57,8 @@ export function App() {
         <Route path="process" element={<ProcessPage />} />
         <Route path="production" element={<ProductionPage />} />
         <Route path="hr" element={<HrPage />} />
+        <Route path="hr/new" element={<WorkerEditorPage />} />
+        <Route path="hr/:id" element={<WorkerEditorPage />} />
         <Route path="settings" element={<WebsiteSettingsPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="messages" element={<MessagesPage />} />

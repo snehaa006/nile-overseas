@@ -57,9 +57,6 @@ export function WebsiteSettingsPage() {
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="font-serif text-3xl font-bold text-primary">Website Settings</h1>
-        <p className="text-muted-foreground">
-          These values render across the public website instantly.
-        </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -111,9 +108,6 @@ export function WebsiteSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Home hero image</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            The showcase photo shown in the homepage hero.
-          </p>
         </CardHeader>
         <CardContent>
           <HeroImageManager />
@@ -123,9 +117,6 @@ export function WebsiteSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Site logo</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            The main Nile Overseas logo, shown site-wide.
-          </p>
         </CardHeader>
         <CardContent>
           <SiteLogoManager />
@@ -135,9 +126,6 @@ export function WebsiteSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Brand logos</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Upload or replace the logo shown for each brand across the website.
-          </p>
         </CardHeader>
         <CardContent>
           <BrandLogoManager />
@@ -147,9 +135,6 @@ export function WebsiteSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">About page photos</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            The two photos shown alongside the quote on the public About page.
-          </p>
         </CardHeader>
         <CardContent>
           <AboutPhotosManager />
@@ -159,10 +144,6 @@ export function WebsiteSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Process photos</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            A photo for each stage of the “How It's Made” page, shown alongside
-            the step's description.
-          </p>
         </CardHeader>
         <CardContent>
           <ProcessPhotoManager />
@@ -172,11 +153,6 @@ export function WebsiteSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Ownership &amp; Management</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            The people shown in the “Ownership and management” section at the
-            bottom of the Home page. Add a photo, name, role and short
-            description for each person.
-          </p>
         </CardHeader>
         <CardContent>
           <TeamManager />
@@ -186,10 +162,6 @@ export function WebsiteSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Customer Reviews</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Reviews visitors leave on the Contact page, shown on the Home page.
-            Hide or delete anything you don't want on the website.
-          </p>
         </CardHeader>
         <CardContent>
           <ReviewsManager />

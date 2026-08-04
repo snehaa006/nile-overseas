@@ -5,6 +5,7 @@ import {
   createEmployee,
   deleteEmployee,
   fetchAttendance,
+  fetchEmployee,
   fetchEmployees,
   markAllAttendance,
   markAttendance,
@@ -15,6 +16,15 @@ import type { TablesInsert, TablesUpdate } from "@/shared/types/database";
 
 export function useEmployees() {
   return useQuery({ queryKey: qk.employees, queryFn: fetchEmployees });
+}
+
+/** One worker, for the editor route. */
+export function useEmployee(id?: string) {
+  return useQuery({
+    queryKey: qk.employee(id ?? ""),
+    queryFn: () => fetchEmployee(id!),
+    enabled: Boolean(id),
+  });
 }
 
 function useInvalidateEmployees() {
@@ -32,11 +42,14 @@ export function useCreateEmployee() {
 }
 
 export function useUpdateEmployee() {
-  const invalidate = useInvalidateEmployees();
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (args: { id: string; input: TablesUpdate<"employees"> }) =>
       updateEmployee(args.id, args.input),
-    onSuccess: invalidate,
+    onSuccess: (_data, args) => {
+      qc.invalidateQueries({ queryKey: qk.employees });
+      qc.invalidateQueries({ queryKey: qk.employee(args.id) });
+    },
   });
 }
 
