@@ -312,6 +312,46 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["contact_messages"]["Insert"]>;
         Relationships: [];
       };
+      employees: {
+        Row: {
+          created_at: string;
+          designation: string;
+          employee_code: string;
+          id: string;
+          is_active: boolean;
+          name: string;
+          salary: number;
+        };
+        Insert: {
+          created_at?: string;
+          designation: string;
+          employee_code?: string;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          salary?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["employees"]["Insert"]>;
+        Relationships: [];
+      };
+      attendance: {
+        Row: {
+          created_at: string;
+          employee_id: string;
+          id: string;
+          status: "present" | "absent";
+          work_date: string;
+        };
+        Insert: {
+          created_at?: string;
+          employee_id: string;
+          id?: string;
+          status: "present" | "absent";
+          work_date: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["attendance"]["Insert"]>;
+        Relationships: [];
+      };
       reviews: {
         Row: {
           created_at: string;
