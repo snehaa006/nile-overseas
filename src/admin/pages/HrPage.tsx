@@ -1,6 +1,16 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, Pencil, Plus, Trash2, UserCheck, UserX, Undo2 } from "lucide-react";
+import {
+  BadgeIndianRupee,
+  Check,
+  CircleSlash,
+  Pencil,
+  Plus,
+  Trash2,
+  UserRound,
+  Users,
+  X,
+} from "lucide-react";
 import {
   useAttendance,
   useClearAttendance,
@@ -14,7 +24,6 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { Badge } from "@/shared/components/ui/badge";
 import { DatePicker } from "@/shared/components/ui/date-picker";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/components/ui/tabs";
 import {
@@ -54,10 +63,89 @@ export function HrPage() {
   );
 }
 
+/* -------------------------------- Shared -------------------------------- */
+
+/** "Ramesh Kumar" -> "RK" — the avatar stand-in, we hold no worker photos. */
+function initials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function Avatar({ name }: { name: string }) {
+  return (
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">
+      {initials(name) || <UserRound className="h-4 w-4" />}
+    </div>
+  );
+}
+
+function EmployeeCell({ employee }: { employee: Employee }) {
+  return (
+    <div className="flex items-center gap-3">
+      <Avatar name={employee.name} />
+      <div className="min-w-0">
+        <p className="truncate font-medium">{employee.name}</p>
+        <p className="font-mono text-xs text-muted-foreground">
+          {employee.employee_code}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** A compact figure tile — the counts that sit above each tab's table. */
+function Tile({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string | number;
+  tone?: "neutral" | "present" | "absent";
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border px-4 py-3",
+        tone === "present" && "border-emerald-200 bg-emerald-50",
+        tone === "absent" && "border-rose-200 bg-rose-50",
+        tone === "neutral" && "bg-card",
+      )}
+    >
+      <p
+        className={cn(
+          "text-xs font-medium uppercase tracking-wide",
+          tone === "present" && "text-emerald-700",
+          tone === "absent" && "text-rose-700",
+          tone === "neutral" && "text-muted-foreground",
+        )}
+      >
+        {label}
+      </p>
+      <p
+        className={cn(
+          "mt-0.5 text-2xl font-bold",
+          tone === "present" && "text-emerald-800",
+          tone === "absent" && "text-rose-800",
+          tone === "neutral" && "text-primary",
+        )}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
 /* ------------------------------- Workers -------------------------------- */
 
 function WorkersTab() {
   const { data: employees, isLoading, isError, error, refetch } = useEmployees();
+  const roster = employees ?? [];
+  const payroll = roster.reduce((sum, e) => sum + Number(e.salary), 0);
 
   return (
     <div className="space-y-6">
@@ -67,25 +155,53 @@ function WorkersTab() {
         <LoadingState />
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
-      ) : employees && employees.length > 0 ? (
-        <div className="rounded-xl border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Designation</TableHead>
-                <TableHead className="text-right">Salary</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {employees.map((employee) => (
-                <WorkerRow key={employee.id} employee={employee} />
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+      ) : roster.length > 0 ? (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex items-center gap-4 rounded-xl border bg-card px-4 py-3">
+              <div className="rounded-lg bg-accent/10 p-2.5 text-accent">
+                <Users className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Workers
+                </p>
+                <p className="text-2xl font-bold text-primary">{roster.length}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 rounded-xl border bg-card px-4 py-3">
+              <div className="rounded-lg bg-accent/10 p-2.5 text-accent">
+                <BadgeIndianRupee className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Monthly payroll
+                </p>
+                <p className="text-2xl font-bold text-primary">
+                  {formatCurrency(payroll)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead>Worker</TableHead>
+                  <TableHead>Designation</TableHead>
+                  <TableHead className="text-right">Salary</TableHead>
+                  <TableHead className="w-[1%]" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {roster.map((employee) => (
+                  <WorkerRow key={employee.id} employee={employee} />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       ) : (
         <EmptyState
           title="No workers yet"
@@ -128,8 +244,14 @@ function AddWorkerForm() {
   };
 
   return (
-    <div className="rounded-xl border bg-card p-4">
-      <div className="flex flex-wrap items-end gap-3">
+    <div className="rounded-xl border bg-card">
+      <div className="border-b px-4 py-3">
+        <h2 className="font-medium">Add a worker</h2>
+        <p className="text-xs text-muted-foreground">
+          The employee ID (EMP-0001, EMP-0002, …) is generated automatically.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-end gap-3 p-4">
         <div className="min-w-[180px] flex-1">
           <Label htmlFor="worker-name">Name</Label>
           <Input
@@ -150,7 +272,7 @@ function AddWorkerForm() {
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           />
         </div>
-        <div className="min-w-[140px]">
+        <div className="min-w-[150px]">
           <Label htmlFor="worker-salary">Monthly salary (₹)</Label>
           <Input
             id="worker-salary"
@@ -172,9 +294,6 @@ function AddWorkerForm() {
           Add Worker
         </Button>
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        The employee ID (EMP-0001, EMP-0002, …) is generated automatically.
-      </p>
     </div>
   );
 }
@@ -214,6 +333,13 @@ function WorkerRow({ employee }: { employee: Employee }) {
     }
   };
 
+  const cancel = () => {
+    setName(employee.name);
+    setDesignation(employee.designation);
+    setSalary(String(employee.salary));
+    setEditing(false);
+  };
+
   const handleRemove = async () => {
     if (
       !confirm(
@@ -231,21 +357,25 @@ function WorkerRow({ employee }: { employee: Employee }) {
 
   if (editing) {
     return (
-      <TableRow>
-        <TableCell className="font-mono text-xs">{employee.employee_code}</TableCell>
+      <TableRow className="bg-muted/30">
         <TableCell>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="h-8"
-            autoFocus
-          />
+          <div className="flex items-center gap-3">
+            <Avatar name={name || employee.name} />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && save()}
+              className="h-9"
+              autoFocus
+            />
+          </div>
         </TableCell>
         <TableCell>
           <Input
             value={designation}
             onChange={(e) => setDesignation(e.target.value)}
-            className="h-8"
+            onKeyDown={(e) => e.key === "Enter" && save()}
+            className="h-9"
           />
         </TableCell>
         <TableCell>
@@ -255,25 +385,17 @@ function WorkerRow({ employee }: { employee: Employee }) {
             step="0.01"
             value={salary}
             onChange={(e) => setSalary(e.target.value)}
-            className="h-8 text-right"
+            onKeyDown={(e) => e.key === "Enter" && save()}
+            className="h-9 text-right"
           />
         </TableCell>
         <TableCell>
-          <div className="flex justify-end gap-2">
-            <Button size="sm" onClick={save} disabled={busy}>
-              <Check className="h-4 w-4" /> Save
+          <div className="flex justify-end gap-1.5">
+            <Button size="icon" title="Save" onClick={save} disabled={busy}>
+              <Check className="h-4 w-4" />
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setName(employee.name);
-                setDesignation(employee.designation);
-                setSalary(String(employee.salary));
-                setEditing(false);
-              }}
-            >
-              Cancel
+            <Button size="icon" variant="outline" title="Cancel" onClick={cancel}>
+              <X className="h-4 w-4" />
             </Button>
           </div>
         </TableCell>
@@ -282,24 +404,30 @@ function WorkerRow({ employee }: { employee: Employee }) {
   }
 
   return (
-    <TableRow>
-      <TableCell className="font-mono text-xs">{employee.employee_code}</TableCell>
-      <TableCell className="font-medium">{employee.name}</TableCell>
-      <TableCell className="text-muted-foreground">{employee.designation}</TableCell>
-      <TableCell className="text-right">{formatCurrency(employee.salary)}</TableCell>
+    <TableRow className="group">
       <TableCell>
-        <div className="flex justify-end gap-2">
+        <EmployeeCell employee={employee} />
+      </TableCell>
+      <TableCell className="text-muted-foreground">{employee.designation}</TableCell>
+      <TableCell className="text-right font-medium tabular-nums">
+        {formatCurrency(employee.salary)}
+      </TableCell>
+      <TableCell>
+        <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
           <Button
-            size="sm"
-            variant="outline"
+            size="icon"
+            variant="ghost"
+            title="Edit worker"
             onClick={() => setEditing(true)}
             disabled={busy}
           >
-            <Pencil className="h-4 w-4" /> Edit
+            <Pencil className="h-4 w-4" />
           </Button>
           <Button
             size="icon"
-            variant="destructive"
+            variant="ghost"
+            title="Remove worker"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={handleRemove}
             disabled={busy}
           >
@@ -330,13 +458,12 @@ function AttendanceTab() {
   const absent = roster.filter((e) => statusById.get(e.id) === "absent").length;
   const unmarked = roster.length - present - absent;
 
-  const handleMarkAllPresent = async () => {
+  const handleMarkAll = async (status: AttendanceStatus) => {
     try {
-      await markAll.mutateAsync({
-        employeeIds: roster.map((e) => e.id),
-        status: "present",
-      });
-      toast.success("Everyone marked present");
+      await markAll.mutateAsync({ employeeIds: roster.map((e) => e.id), status });
+      toast.success(
+        status === "present" ? "Everyone marked P" : "Everyone marked A",
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to mark attendance");
     }
@@ -346,18 +473,29 @@ function AttendanceTab() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <DatePicker value={date} onChange={setDate} />
-        <Button
-          variant="outline"
-          onClick={handleMarkAllPresent}
-          disabled={markAll.isPending || roster.length === 0}
-        >
-          {markAll.isPending ? (
-            <Spinner className="h-4 w-4" />
-          ) : (
-            <UserCheck className="h-4 w-4" />
-          )}
-          Mark all present
-        </Button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Mark all</span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-10 font-semibold text-emerald-700 hover:bg-emerald-50"
+            title="Mark everyone present"
+            onClick={() => handleMarkAll("present")}
+            disabled={markAll.isPending || roster.length === 0}
+          >
+            {markAll.isPending ? <Spinner className="h-4 w-4" /> : "P"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-10 font-semibold text-rose-700 hover:bg-rose-50"
+            title="Mark everyone absent"
+            onClick={() => handleMarkAll("absent")}
+            disabled={markAll.isPending || roster.length === 0}
+          >
+            {markAll.isPending ? <Spinner className="h-4 w-4" /> : "A"}
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -371,20 +509,19 @@ function AttendanceTab() {
         />
       ) : (
         <>
-          <div className="flex flex-wrap gap-3 text-sm">
-            <Badge variant="success">Present: {present}</Badge>
-            <Badge variant="secondary">Absent: {absent}</Badge>
-            <Badge variant="muted">Not marked: {unmarked}</Badge>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Tile label="Present" value={present} tone="present" />
+            <Tile label="Absent" value={absent} tone="absent" />
+            <Tile label="Not marked" value={unmarked} />
           </div>
 
-          <div className="rounded-xl border">
+          <div className="overflow-hidden rounded-xl border bg-card">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Employee ID</TableHead>
-                  <TableHead>Name</TableHead>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead>Worker</TableHead>
                   <TableHead>Designation</TableHead>
-                  <TableHead className="text-right">Attendance</TableHead>
+                  <TableHead className="w-[1%] text-right">P / A</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -399,6 +536,12 @@ function AttendanceTab() {
               </TableBody>
             </Table>
           </div>
+
+          <p className="text-xs text-muted-foreground">
+            <span className="font-semibold">P</span> = present,{" "}
+            <span className="font-semibold">A</span> = absent. Tap the highlighted
+            letter again to clear the mark.
+          </p>
         </>
       )}
     </div>
@@ -418,58 +561,90 @@ function AttendanceRow({
   const clear = useClearAttendance(date);
   const busy = mark.isPending || clear.isPending;
 
-  const setStatus = async (next: AttendanceStatus) => {
+  /** Tapping the letter that is already lit clears the mark instead. */
+  const toggle = async (next: AttendanceStatus) => {
     try {
-      await mark.mutateAsync({ employeeId: employee.id, status: next });
+      if (status === next) await clear.mutateAsync(employee.id);
+      else await mark.mutateAsync({ employeeId: employee.id, status: next });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save attendance");
     }
   };
 
-  const handleClear = async () => {
-    try {
-      await clear.mutateAsync(employee.id);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to clear attendance");
-    }
-  };
-
   return (
-    <TableRow className={cn(status === "absent" && "bg-muted/40")}>
-      <TableCell className="font-mono text-xs">{employee.employee_code}</TableCell>
-      <TableCell className="font-medium">{employee.name}</TableCell>
+    <TableRow
+      className={cn(
+        status === "present" && "bg-emerald-50/50",
+        status === "absent" && "bg-rose-50/50",
+      )}
+    >
+      <TableCell>
+        <EmployeeCell employee={employee} />
+      </TableCell>
       <TableCell className="text-muted-foreground">{employee.designation}</TableCell>
       <TableCell>
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            size="sm"
-            variant={status === "present" ? "default" : "outline"}
-            onClick={() => setStatus("present")}
-            disabled={busy}
-          >
-            <UserCheck className="h-4 w-4" /> Present
-          </Button>
-          <Button
-            size="sm"
-            variant={status === "absent" ? "destructive" : "outline"}
-            onClick={() => setStatus("absent")}
-            disabled={busy}
-          >
-            <UserX className="h-4 w-4" /> Absent
-          </Button>
-          {status && (
-            <Button
-              size="icon"
-              variant="ghost"
-              title="Clear mark"
-              onClick={handleClear}
-              disabled={busy}
-            >
-              <Undo2 className="h-4 w-4" />
-            </Button>
+        <div className="flex items-center justify-end gap-2">
+          {!status && (
+            <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
+              <CircleSlash className="h-3.5 w-3.5" /> not marked
+            </span>
           )}
+          <div className="inline-flex overflow-hidden rounded-lg border">
+            <MarkButton
+              letter="P"
+              title={`Mark ${employee.name} present`}
+              active={status === "present"}
+              tone="present"
+              disabled={busy}
+              onClick={() => toggle("present")}
+            />
+            <MarkButton
+              letter="A"
+              title={`Mark ${employee.name} absent`}
+              active={status === "absent"}
+              tone="absent"
+              disabled={busy}
+              onClick={() => toggle("absent")}
+            />
+          </div>
         </div>
       </TableCell>
     </TableRow>
+  );
+}
+
+function MarkButton({
+  letter,
+  title,
+  active,
+  tone,
+  disabled,
+  onClick,
+}: {
+  letter: string;
+  title: string;
+  active: boolean;
+  tone: "present" | "absent";
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-pressed={active}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "h-9 w-10 text-sm font-bold transition-colors first:border-r disabled:opacity-50",
+        !active && "bg-background text-muted-foreground",
+        !active && tone === "present" && "hover:bg-emerald-50 hover:text-emerald-700",
+        !active && tone === "absent" && "hover:bg-rose-50 hover:text-rose-700",
+        active && tone === "present" && "bg-emerald-600 text-white",
+        active && tone === "absent" && "bg-rose-600 text-white",
+      )}
+    >
+      {letter}
+    </button>
   );
 }
