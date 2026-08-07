@@ -5,10 +5,12 @@ import {
   createEmployee,
   deleteEmployee,
   fetchAdvances,
+  fetchAttendance,
   fetchAttendanceRange,
   fetchEmployee,
   fetchEmployees,
   fetchPayrollMonth,
+  markAllAttendance,
   markAttendance,
   saveAdvance,
   savePayrollMonth,
@@ -16,7 +18,7 @@ import {
   setOvertime,
   updateEmployee,
 } from "@/shared/api/hr";
-import type { AttendanceStatus } from "@/shared/types/models";
+import type { AttendanceStatus, Employee } from "@/shared/types/models";
 import type { TablesInsert, TablesUpdate } from "@/shared/types/database";
 
 export function useEmployees() {
@@ -66,6 +68,75 @@ export function useDeleteEmployee() {
   });
 }
 
+/* ---------------------------- One day at a time -------------------------- */
+
+export function useAttendanceDay(date: string) {
+  return useQuery({
+    queryKey: qk.attendanceDay(date),
+    queryFn: () => fetchAttendance(date),
+  });
+}
+
+/** A day's edit also invalidates that month — payroll and sheets sum it. */
+function useInvalidateDay(date: string) {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: qk.attendanceDay(date) });
+    qc.invalidateQueries({ queryKey: ["attendance-month", date.slice(0, 7)] });
+  };
+}
+
+export function useMarkAttendanceForDay(date: string) {
+  const invalidate = useInvalidateDay(date);
+  return useMutation({
+    mutationFn: (args: {
+      employeeId: string;
+      status: AttendanceStatus;
+      shiftHours: number;
+      hours?: number;
+    }) => markAttendance({ ...args, date }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useClearAttendanceForDay(date: string) {
+  const invalidate = useInvalidateDay(date);
+  return useMutation({
+    mutationFn: (employeeId: string) => clearAttendance({ employeeId, date }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSetHoursForDay(date: string) {
+  const invalidate = useInvalidateDay(date);
+  return useMutation({
+    mutationFn: (args: { employeeId: string; hours: number }) =>
+      setHoursWorked({ ...args, date }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSetOvertimeForDay(date: string) {
+  const invalidate = useInvalidateDay(date);
+  return useMutation({
+    mutationFn: (args: { employeeId: string; hours: number }) =>
+      setOvertime({ ...args, date }),
+    onSuccess: invalidate,
+  });
+}
+
+/** The "everyone present" (or absent) shortcut for a day. */
+export function useMarkAllAttendance(date: string) {
+  const invalidate = useInvalidateDay(date);
+  return useMutation({
+    mutationFn: (args: {
+      employees: Pick<Employee, "id" | "shift_hours">[];
+      status: AttendanceStatus;
+    }) => markAllAttendance({ ...args, date }),
+    onSuccess: invalidate,
+  });
+}
+
 /* -------------------------------- Payroll ------------------------------- */
 
 /**
@@ -80,7 +151,7 @@ export function useAttendanceMonth(month: string, employeeId?: string) {
 }
 
 /** Marks one day for one worker on their month sheet. */
-export function useMarkAttendance(month: string) {
+export function useMarkAttendanceForMonth(month: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (args: {
@@ -94,7 +165,7 @@ export function useMarkAttendance(month: string) {
   });
 }
 
-export function useClearAttendance(month: string) {
+export function useClearAttendanceForMonth(month: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (args: { employeeId: string; date: string }) =>
@@ -103,7 +174,7 @@ export function useClearAttendance(month: string) {
   });
 }
 
-export function useSetHoursWorked(month: string) {
+export function useSetHoursForMonth(month: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (args: { employeeId: string; date: string; hours: number }) =>
@@ -112,7 +183,7 @@ export function useSetHoursWorked(month: string) {
   });
 }
 
-export function useSetOvertime(month: string) {
+export function useSetOvertimeForMonth(month: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (args: { employeeId: string; date: string; hours: number }) =>

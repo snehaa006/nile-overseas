@@ -5,14 +5,14 @@ import { ArrowLeft, Banknote, Pencil, Wallet } from "lucide-react";
 import {
   useAdvances,
   useAttendanceMonth,
-  useClearAttendance,
+  useClearAttendanceForMonth,
   useEmployee,
-  useMarkAttendance,
+  useMarkAttendanceForMonth,
   usePayrollMonth,
   useSaveAdvance,
   useSavePayrollMonth,
-  useSetHoursWorked,
-  useSetOvertime,
+  useSetHoursForMonth,
+  useSetOvertimeForMonth,
 } from "@/shared/hooks/useHr";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
@@ -369,10 +369,10 @@ function DayRow({
   employee: Employee;
   record?: AttendanceRecord;
 }) {
-  const mark = useMarkAttendance(month);
-  const clear = useClearAttendance(month);
-  const setHours = useSetHoursWorked(month);
-  const setOvertime = useSetOvertime(month);
+  const mark = useMarkAttendanceForMonth(month);
+  const clear = useClearAttendanceForMonth(month);
+  const setHours = useSetHoursForMonth(month);
+  const setOvertime = useSetOvertimeForMonth(month);
   const status = record?.status;
   const busy = mark.isPending || clear.isPending;
 
