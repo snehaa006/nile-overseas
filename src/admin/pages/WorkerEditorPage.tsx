@@ -4,9 +4,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import {
   useCreateEmployee,
+  useDeleteEmployee,
   useEmployee,
   useUpdateEmployee,
 } from "@/shared/hooks/useHr";
@@ -38,6 +39,8 @@ export function WorkerEditorPage() {
   const { data: existing, isLoading } = useEmployee(id);
   const createEmployee = useCreateEmployee();
   const updateEmployee = useUpdateEmployee();
+  const removeEmployee = useDeleteEmployee();
+  const backTo = isEdit ? `/admin/hr/${id}` : "/admin/hr";
 
   const {
     register, handleSubmit, reset, formState: { errors, isSubmitting },
@@ -62,11 +65,12 @@ export function WorkerEditorPage() {
       if (isEdit && id) {
         await updateEmployee.mutateAsync({ id, input: values });
         toast.success("Worker updated");
+        navigate(`/admin/hr/${id}`);
       } else {
         const created = await createEmployee.mutateAsync(values);
         toast.success(`Worker added — ${created.employee_code}`);
+        navigate(`/admin/hr/${created.id}`);
       }
-      navigate("/admin/hr");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Save failed");
     }
@@ -77,10 +81,10 @@ export function WorkerEditorPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <Link
-        to="/admin/hr"
+        to={backTo}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-accent"
       >
-        <ArrowLeft className="h-4 w-4" /> Back to HR
+        <ArrowLeft className="h-4 w-4" /> Back
       </Link>
 
       <h1 className="font-serif text-3xl font-bold text-primary">
@@ -159,8 +163,33 @@ export function WorkerEditorPage() {
                 {isEdit ? "Save changes" : "Add worker"}
               </Button>
               <Button type="button" variant="outline" asChild>
-                <Link to="/admin/hr">Cancel</Link>
+                <Link to={backTo}>Cancel</Link>
               </Button>
+              {isEdit && id && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  disabled={removeEmployee.isPending}
+                  onClick={async () => {
+                    if (
+                      !confirm(
+                        `Remove ${existing?.name}? Their attendance history will be deleted too.`,
+                      )
+                    )
+                      return;
+                    try {
+                      await removeEmployee.mutateAsync(id);
+                      toast.success("Worker removed");
+                      navigate("/admin/hr");
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Remove failed");
+                    }
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" /> Remove worker
+                </Button>
+              )}
             </div>
           </form>
         </CardContent>

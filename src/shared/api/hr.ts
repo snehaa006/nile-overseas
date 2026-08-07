@@ -65,16 +65,6 @@ export async function deleteEmployee(id: string): Promise<void> {
   if (error) throw error;
 }
 
-/** Attendance rows for one day — workers with no row yet are simply unmarked. */
-export async function fetchAttendance(date: string): Promise<AttendanceRecord[]> {
-  const { data, error } = await supabase
-    .from("attendance")
-    .select("*")
-    .eq("work_date", date);
-  if (error) throw error;
-  return data;
-}
-
 /**
  * Marks (or re-marks) a worker for a day — one row per worker per date.
  * A present day starts at the worker's full shift; an absent day at zero.
@@ -191,11 +181,16 @@ export async function fetchAdvances(month: string): Promise<SalaryAdvance[]> {
   return data;
 }
 
-/** Sets a worker's advance for a month — one running figure, not a ledger. */
+/**
+ * Sets a worker's advances for a month — one running cash figure and one
+ * bank figure, not a ledger of withdrawals. Both are always written, so the
+ * caller passes the current value for whichever field it isn't changing.
+ */
 export async function saveAdvance(args: {
   employeeId: string;
   month: string;
-  amount: number;
+  cashAdvance: number;
+  bankAdvance: number;
 }): Promise<SalaryAdvance> {
   const { data, error } = await supabase
     .from("salary_advances")
@@ -203,7 +198,8 @@ export async function saveAdvance(args: {
       {
         employee_id: args.employeeId,
         month: args.month,
-        amount: args.amount,
+        cash_advance: args.cashAdvance,
+        bank_advance: args.bankAdvance,
       },
       { onConflict: "employee_id,month" },
     )
@@ -223,24 +219,5 @@ export async function clearAttendance(args: {
     .delete()
     .eq("employee_id", args.employeeId)
     .eq("work_date", args.date);
-  if (error) throw error;
-}
-
-/** Marks every listed worker at once — the "all present" shortcut. */
-export async function markAllAttendance(args: {
-  employees: Pick<Employee, "id" | "shift_hours">[];
-  date: string;
-  status: AttendanceStatus;
-}): Promise<void> {
-  if (args.employees.length === 0) return;
-  const { error } = await supabase.from("attendance").upsert(
-    args.employees.map((employee) => ({
-      employee_id: employee.id,
-      work_date: args.date,
-      status: args.status,
-      hours_worked: args.status === "absent" ? 0 : Number(employee.shift_hours),
-    })),
-    { onConflict: "employee_id,work_date" },
-  );
   if (error) throw error;
 }

@@ -360,14 +360,16 @@ export type Database = {
       };
       salary_advances: {
         Row: {
-          amount: number;
+          bank_advance: number;
+          cash_advance: number;
           created_at: string;
           employee_id: string;
           id: string;
           month: string;
         };
         Insert: {
-          amount?: number;
+          bank_advance?: number;
+          cash_advance?: number;
           created_at?: string;
           employee_id: string;
           id?: string;
