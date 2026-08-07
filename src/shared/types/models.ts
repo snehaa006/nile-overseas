@@ -32,6 +32,8 @@ export type PayrollRow = {
   basePay: number;
   overtimePay: number;
   totalPay: number;
+  cashAdvance: number;
+  bankAdvance: number;
   advance: number;
   netPay: number;
 };
@@ -46,8 +48,8 @@ export const DEFAULT_WORKING_DAYS = 26;
  *
  * Base pay is then hours-based rather than day-based: a present day normally
  * carries a full shift, but a half day carries only the hours worked, and
- * pays accordingly. Overtime is paid at the same hourly rate, and any advance
- * drawn during the month is deducted from the balance.
+ * pays accordingly. Overtime is paid at the same hourly rate, and advances
+ * drawn during the month — cash and bank alike — come off the balance.
  */
 export function calcPayroll(args: {
   employee: Employee;
@@ -56,10 +58,12 @@ export function calcPayroll(args: {
   absentDays: number;
   hoursWorked: number;
   overtimeHours: number;
-  advance: number;
+  cashAdvance: number;
+  bankAdvance: number;
 }): PayrollRow {
   const { employee, workingDays, presentDays, absentDays } = args;
-  const { hoursWorked, overtimeHours, advance } = args;
+  const { hoursWorked, overtimeHours, cashAdvance, bankAdvance } = args;
+  const advance = cashAdvance + bankAdvance;
   const dayRate = workingDays > 0 ? Number(employee.salary) / workingDays : 0;
   const hourlyRate = employee.shift_hours > 0 ? dayRate / Number(employee.shift_hours) : 0;
   const basePay = hourlyRate * hoursWorked;
@@ -77,6 +81,8 @@ export function calcPayroll(args: {
     basePay,
     overtimePay,
     totalPay,
+    cashAdvance,
+    bankAdvance,
     advance,
     // Advances already paid out mid-month come off what's still owed.
     netPay: totalPay - advance,

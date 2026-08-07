@@ -100,7 +100,7 @@ Server-side invariants (not trusted to the client):
   attendance is unique per worker per day, so a re-mark overwrites rather than duplicates.
 - **Payroll** derives from attendance: `day rate = salary / working days in month`,
   `hourly = day rate / shift hours`,
-  `net pay = (hours worked + OT hours) x hourly - advance drawn`.
+  `net pay = (hours worked + OT hours) x hourly - (cash + bank advance)`.
   Marking someone present books a full shift; a short day is edited down to the
   hours actually worked. Working days live in `payroll_months` (default 26).
 - **Closing stock** is a generated column: `opening + production − sales`.
@@ -171,6 +171,7 @@ Create more admins in Supabase Dashboard → Authentication → Add user.
 | Daily stock entry + lock + monthly/yearly rollups | `StockPage`, `StockRowEditor`, `StockRollupView` |
 | Reports + charts | `ReportsPage.tsx` |
 | CMS (settings) | `WebsiteSettingsPage.tsx` |
-| HR — worker roster, daily attendance, payroll | `HrPage.tsx`, `WorkerEditorPage.tsx`, `shared/api/hr.ts` |
-| One worker's month of attendance | `WorkerAttendancePage.tsx` |
+| HR roster — search + table, read-only | `HrPage.tsx` |
+| One worker: details, month attendance, OT, advances, pay | `WorkerDetailPage.tsx` |
+| Add / edit / remove a worker | `WorkerEditorPage.tsx` |
 ```

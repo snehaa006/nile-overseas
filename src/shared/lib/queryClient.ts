@@ -39,7 +39,6 @@ export const qk = {
   contactMessages: ["contact-messages"] as const,
   employees: ["employees"] as const,
   employee: (id: string) => ["employee", id] as const,
-  attendanceDay: (date: string) => ["attendance-day", date] as const,
   attendanceMonth: (month: string, employeeId?: string) =>
     ["attendance-month", month, employeeId ?? "all"] as const,
   payrollMonth: (month: string) => ["payroll-month", month] as const,
