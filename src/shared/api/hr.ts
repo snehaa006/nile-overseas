@@ -65,6 +65,16 @@ export async function deleteEmployee(id: string): Promise<void> {
   if (error) throw error;
 }
 
+/** Attendance rows for one day — workers with no row yet are simply unmarked. */
+export async function fetchAttendance(date: string): Promise<AttendanceRecord[]> {
+  const { data, error } = await supabase
+    .from("attendance")
+    .select("*")
+    .eq("work_date", date);
+  if (error) throw error;
+  return data;
+}
+
 /**
  * Marks (or re-marks) a worker for a day — one row per worker per date.
  * A present day starts at the worker's full shift; an absent day at zero.
@@ -219,5 +229,24 @@ export async function clearAttendance(args: {
     .delete()
     .eq("employee_id", args.employeeId)
     .eq("work_date", args.date);
+  if (error) throw error;
+}
+
+/** Marks every listed worker at once — the "all present" shortcut. */
+export async function markAllAttendance(args: {
+  employees: Pick<Employee, "id" | "shift_hours">[];
+  date: string;
+  status: AttendanceStatus;
+}): Promise<void> {
+  if (args.employees.length === 0) return;
+  const { error } = await supabase.from("attendance").upsert(
+    args.employees.map((employee) => ({
+      employee_id: employee.id,
+      work_date: args.date,
+      status: args.status,
+      hours_worked: args.status === "absent" ? 0 : Number(employee.shift_hours),
+    })),
+    { onConflict: "employee_id,work_date" },
+  );
   if (error) throw error;
 }

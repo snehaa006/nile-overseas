@@ -171,7 +171,7 @@ Create more admins in Supabase Dashboard → Authentication → Add user.
 | Daily stock entry + lock + monthly/yearly rollups | `StockPage`, `StockRowEditor`, `StockRollupView` |
 | Reports + charts | `ReportsPage.tsx` |
 | CMS (settings) | `WebsiteSettingsPage.tsx` |
-| HR roster — search + table, read-only | `HrPage.tsx` |
+| HR — roster, one day's attendance, month payroll | `HrPage.tsx` |
 | One worker: details, month attendance, OT, advances, pay | `WorkerDetailPage.tsx` |
 | Add / edit / remove a worker | `WorkerEditorPage.tsx` |
 ```
