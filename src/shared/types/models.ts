@@ -24,6 +24,7 @@ export type PayrollRow = {
   employee: Employee;
   presentDays: number;
   absentDays: number;
+  hoursWorked: number;
   overtimeHours: number;
   dayRate: number;
   hourlyRate: number;
@@ -38,25 +39,32 @@ export const DEFAULT_WORKING_DAYS = 26;
 /**
  * Monthly salary is for a full month of work, so the day rate divides it by
  * the working days actually in that month, and the hourly rate divides that
- * by the shift length. Overtime is paid at the same hourly rate.
+ * by the shift length.
+ *
+ * Base pay is then hours-based rather than day-based: a present day normally
+ * carries a full shift, but a half day carries only the hours worked, and
+ * pays accordingly. Overtime is paid at the same hourly rate.
  */
 export function calcPayroll(args: {
   employee: Employee;
   workingDays: number;
   presentDays: number;
   absentDays: number;
+  hoursWorked: number;
   overtimeHours: number;
 }): PayrollRow {
-  const { employee, workingDays, presentDays, absentDays, overtimeHours } = args;
+  const { employee, workingDays, presentDays, absentDays } = args;
+  const { hoursWorked, overtimeHours } = args;
   const dayRate = workingDays > 0 ? Number(employee.salary) / workingDays : 0;
   const hourlyRate = employee.shift_hours > 0 ? dayRate / Number(employee.shift_hours) : 0;
-  const basePay = dayRate * presentDays;
+  const basePay = hourlyRate * hoursWorked;
   const overtimePay = hourlyRate * overtimeHours;
 
   return {
     employee,
     presentDays,
     absentDays,
+    hoursWorked,
     overtimeHours,
     dayRate,
     hourlyRate,

@@ -98,8 +98,9 @@ Server-side invariants (not trusted to the client):
 - **Employee ID** auto-issued from a sequence (`EMP-0001`), never client-supplied;
   attendance is unique per worker per day, so a re-mark overwrites rather than duplicates.
 - **Payroll** derives from attendance: `day rate = salary / working days in month`,
-  `hourly = day rate / shift hours`, `pay = present days x day rate + OT hours x hourly`.
-  Working days are stored per month in `payroll_months` (default 26).
+  `hourly = day rate / shift hours`, `pay = (hours worked + OT hours) x hourly`.
+  Marking someone present books a full shift; a short day is edited down to the
+  hours actually worked. Working days live in `payroll_months` (default 26).
 - **Closing stock** is a generated column: `opening + production − sales`.
 - **Opening stock carries forward day to day** via triggers, so monthly and
   yearly totals are just rollups (`blanket_monthly_stock`, `blanket_yearly_stock`)
@@ -169,4 +170,5 @@ Create more admins in Supabase Dashboard → Authentication → Add user.
 | Reports + charts | `ReportsPage.tsx` |
 | CMS (settings) | `WebsiteSettingsPage.tsx` |
 | HR — worker roster, daily attendance, payroll | `HrPage.tsx`, `WorkerEditorPage.tsx`, `shared/api/hr.ts` |
+| One worker's month of attendance | `WorkerAttendancePage.tsx` |
 ```

@@ -40,7 +40,8 @@ export const qk = {
   employees: ["employees"] as const,
   employee: (id: string) => ["employee", id] as const,
   attendanceDay: (date: string) => ["attendance-day", date] as const,
-  attendanceMonth: (month: string) => ["attendance-month", month] as const,
+  attendanceMonth: (month: string, employeeId?: string) =>
+    ["attendance-month", month, employeeId ?? "all"] as const,
   payrollMonth: (month: string) => ["payroll-month", month] as const,
   productionEntries: ["production-entries"] as const,
   agentSummary: (period: "month" | "year") => ["agent-summary", period] as const,

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { CircleSlash, Pencil, Plus, Trash2, UserRound } from "lucide-react";
+import {
+  CalendarRange, CircleSlash, Pencil, Plus, Search, Trash2, UserRound,
+} from "lucide-react";
 import {
   useAttendance,
   useAttendanceMonth,
@@ -12,6 +14,7 @@ import {
   useMarkAttendance,
   usePayrollMonth,
   useSavePayrollMonth,
+  useSetHoursWorked,
   useSetOvertime,
 } from "@/shared/hooks/useHr";
 import { Button } from "@/shared/components/ui/button";
@@ -24,6 +27,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
 import { LoadingState, ErrorState, EmptyState, Spinner } from "@/shared/components/StateViews";
+import { AttendanceToggle } from "../components/AttendanceToggle";
+import { InlineNumberInput } from "../components/InlineNumberInput";
 import { dateKey, formatCurrency, formatCurrencyExact } from "@/shared/utils/format";
 import { cn } from "@/shared/utils/cn";
 import {
@@ -139,12 +144,46 @@ function Tile({
   );
 }
 
+/** Name, employee ID or designation — one box, used on both tables. */
+function WorkerSearchField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <div className="relative max-w-sm">
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Search workers…"
+        className="pl-9"
+      />
+    </div>
+  );
+}
+
+function filterWorkers(roster: Employee[], query: string): Employee[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return roster;
+  return roster.filter(
+    (e) =>
+      e.name.toLowerCase().includes(q) ||
+      e.employee_code.toLowerCase().includes(q) ||
+      e.designation.toLowerCase().includes(q),
+  );
+}
+
 /* ------------------------------- Workers -------------------------------- */
 
 function WorkersTab() {
   const { data: employees, isLoading, isError, error, refetch } = useEmployees();
+  const [query, setQuery] = useState("");
   const roster = employees ?? [];
   const payroll = roster.reduce((sum, e) => sum + Number(e.salary), 0);
+  const shown = filterWorkers(roster, query);
 
   if (isLoading) return <LoadingState />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
@@ -164,6 +203,8 @@ function WorkersTab() {
         <Tile label="Monthly payroll" value={formatCurrency(payroll)} />
       </div>
 
+      <WorkerSearchField value={query} onChange={setQuery} />
+
       <div className="overflow-hidden rounded-xl border bg-card">
         <Table>
           <TableHeader>
@@ -175,9 +216,16 @@ function WorkersTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {roster.map((employee) => (
+            {shown.map((employee) => (
               <WorkerRow key={employee.id} employee={employee} />
             ))}
+            {shown.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                  No worker matches “{query}”.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
@@ -209,6 +257,11 @@ function WorkerRow({ employee }: { employee: Employee }) {
       </TableCell>
       <TableCell>
         <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
+          <Button size="icon" variant="ghost" title="Month attendance" asChild>
+            <Link to={`/admin/hr/${employee.id}/attendance`}>
+              <CalendarRange className="h-4 w-4" />
+            </Link>
+          </Button>
           <Button size="icon" variant="ghost" title="Edit worker" asChild>
             <Link to={`/admin/hr/${employee.id}`}>
               <Pencil className="h-4 w-4" />
@@ -244,15 +297,17 @@ function AttendanceTab() {
     return map;
   }, [records]);
 
-  const roster = employees ?? [];
+  const [query, setQuery] = useState("");
+  const roster = filterWorkers(employees ?? [], query);
   const statusOf = (id: string) => recordById.get(id)?.status;
-  const present = roster.filter((e) => statusOf(e.id) === "present").length;
-  const absent = roster.filter((e) => statusOf(e.id) === "absent").length;
-  const unmarked = roster.length - present - absent;
+  const all = employees ?? [];
+  const present = all.filter((e) => statusOf(e.id) === "present").length;
+  const absent = all.filter((e) => statusOf(e.id) === "absent").length;
+  const unmarked = all.length - present - absent;
 
   const handleMarkAll = async (status: AttendanceStatus) => {
     try {
-      await markAll.mutateAsync({ employeeIds: roster.map((e) => e.id), status });
+      await markAll.mutateAsync({ employees: all, status });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to mark attendance");
     }
@@ -270,7 +325,7 @@ function AttendanceTab() {
             className="w-10 font-semibold text-emerald-700 hover:bg-emerald-50"
             title="Mark everyone present"
             onClick={() => handleMarkAll("present")}
-            disabled={markAll.isPending || roster.length === 0}
+            disabled={markAll.isPending || all.length === 0}
           >
             {markAll.isPending ? <Spinner className="h-4 w-4" /> : "P"}
           </Button>
@@ -280,7 +335,7 @@ function AttendanceTab() {
             className="w-10 font-semibold text-rose-700 hover:bg-rose-50"
             title="Mark everyone absent"
             onClick={() => handleMarkAll("absent")}
-            disabled={markAll.isPending || roster.length === 0}
+            disabled={markAll.isPending || all.length === 0}
           >
             {markAll.isPending ? <Spinner className="h-4 w-4" /> : "A"}
           </Button>
@@ -291,7 +346,7 @@ function AttendanceTab() {
         <LoadingState />
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
-      ) : roster.length === 0 ? (
+      ) : all.length === 0 ? (
         <EmptyState title="No workers yet" description="Add a worker first." />
       ) : (
         <>
@@ -301,12 +356,15 @@ function AttendanceTab() {
             <Tile label="Not marked" value={unmarked} />
           </div>
 
+          <WorkerSearchField value={query} onChange={setQuery} />
+
           <div className="overflow-hidden rounded-xl border bg-card">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead>Worker</TableHead>
                   <TableHead>Designation</TableHead>
+                  <TableHead className="w-[1%] text-center">Hours</TableHead>
                   <TableHead className="w-[1%] text-center">OT hrs</TableHead>
                   <TableHead className="w-[1%] text-right">P / A</TableHead>
                 </TableRow>
@@ -341,13 +399,20 @@ function AttendanceRow({
   const status = record?.status;
   const mark = useMarkAttendance(date);
   const clear = useClearAttendance(date);
+  const setHours = useSetHoursWorked(date);
+  const setOvertime = useSetOvertime(date);
   const busy = mark.isPending || clear.isPending;
 
   /** Tapping the letter that is already lit clears the mark instead. */
   const toggle = async (next: AttendanceStatus) => {
     try {
       if (status === next) await clear.mutateAsync(employee.id);
-      else await mark.mutateAsync({ employeeId: employee.id, status: next });
+      else
+        await mark.mutateAsync({
+          employeeId: employee.id,
+          status: next,
+          shiftHours: Number(employee.shift_hours),
+        });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save attendance");
     }
@@ -365,11 +430,21 @@ function AttendanceRow({
       </TableCell>
       <TableCell className="text-muted-foreground">{employee.designation}</TableCell>
       <TableCell className="text-center">
-        <OvertimeInput
-          date={date}
-          employeeId={employee.id}
-          hours={record?.overtime_hours ?? 0}
-          enabled={status === "present"}
+        <InlineNumberInput
+          value={Number(record?.hours_worked ?? 0)}
+          disabled={status !== "present"}
+          onCommit={(hours) =>
+            setHours.mutateAsync({ employeeId: employee.id, hours }).then(() => {})
+          }
+        />
+      </TableCell>
+      <TableCell className="text-center">
+        <InlineNumberInput
+          value={Number(record?.overtime_hours ?? 0)}
+          disabled={status !== "present"}
+          onCommit={(hours) =>
+            setOvertime.mutateAsync({ employeeId: employee.id, hours }).then(() => {})
+          }
         />
       </TableCell>
       <TableCell>
@@ -377,24 +452,12 @@ function AttendanceRow({
           {!status && (
             <CircleSlash className="hidden h-4 w-4 text-muted-foreground sm:block" />
           )}
-          <div className="inline-flex overflow-hidden rounded-lg border">
-            <MarkButton
-              letter="P"
-              title={`Mark ${employee.name} present`}
-              active={status === "present"}
-              tone="present"
-              disabled={busy}
-              onClick={() => toggle("present")}
-            />
-            <MarkButton
-              letter="A"
-              title={`Mark ${employee.name} absent`}
-              active={status === "absent"}
-              tone="absent"
-              disabled={busy}
-              onClick={() => toggle("absent")}
-            />
-          </div>
+          <AttendanceToggle
+            status={status}
+            onToggle={toggle}
+            disabled={busy}
+            label={employee.name}
+          />
         </div>
       </TableCell>
     </TableRow>
@@ -413,29 +476,31 @@ function PayrollTab() {
   const roster = employees ?? [];
 
   const rows = useMemo(() => {
-    const tally = new Map(
-      roster.map((e) => [e.id, { present: 0, absent: 0, overtime: 0 }]),
-    );
+    const blank = () => ({ present: 0, absent: 0, hours: 0, overtime: 0 });
+    const tally = new Map(roster.map((e) => [e.id, blank()]));
     for (const record of records ?? []) {
       const entry = tally.get(record.employee_id);
       if (!entry) continue;
       if (record.status === "present") entry.present += 1;
       else entry.absent += 1;
+      entry.hours += Number(record.hours_worked);
       entry.overtime += Number(record.overtime_hours);
     }
     return roster.map((employee) => {
-      const entry = tally.get(employee.id) ?? { present: 0, absent: 0, overtime: 0 };
+      const entry = tally.get(employee.id) ?? blank();
       return calcPayroll({
         employee,
         workingDays,
         presentDays: entry.present,
         absentDays: entry.absent,
+        hoursWorked: entry.hours,
         overtimeHours: entry.overtime,
       });
     });
   }, [roster, records, workingDays]);
 
   const totalPay = rows.reduce((sum, r) => sum + r.totalPay, 0);
+  const totalHours = rows.reduce((sum, r) => sum + r.hoursWorked, 0);
   const totalOvertime = rows.reduce((sum, r) => sum + r.overtimeHours, 0);
 
   return (
@@ -453,8 +518,9 @@ function PayrollTab() {
         <EmptyState title="No workers yet" description="Add a worker first." />
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-4">
             <Tile label="Working days" value={workingDays} />
+            <Tile label="Hours worked" value={totalHours} />
             <Tile label="Overtime hours" value={totalOvertime} />
             <Tile label="Payable" value={formatCurrency(totalPay)} />
           </div>
@@ -465,6 +531,7 @@ function PayrollTab() {
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead>Worker</TableHead>
                   <TableHead className="text-right">Present</TableHead>
+                  <TableHead className="text-right">Hours</TableHead>
                   <TableHead className="text-right">Day rate</TableHead>
                   <TableHead className="text-right">Hourly</TableHead>
                   <TableHead className="text-right">OT hrs</TableHead>
@@ -481,6 +548,9 @@ function PayrollTab() {
                     <TableCell className="text-right tabular-nums">
                       {row.presentDays}
                       <span className="text-muted-foreground">/{workingDays}</span>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {row.hoursWorked || "—"}
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-muted-foreground">
                       {formatCurrencyExact(row.dayRate)}
@@ -500,7 +570,7 @@ function PayrollTab() {
                   </TableRow>
                 ))}
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
-                  <TableCell colSpan={6} className="font-medium">
+                  <TableCell colSpan={7} className="font-medium">
                     Total
                   </TableCell>
                   <TableCell className="text-right font-bold tabular-nums">
@@ -563,91 +633,5 @@ function WorkingDaysField({
         className="h-9 w-20 text-center tabular-nums"
       />
     </div>
-  );
-}
-
-/** Overtime is only meaningful on a day the worker actually turned up. */
-function OvertimeInput({
-  date,
-  employeeId,
-  hours,
-  enabled,
-}: {
-  date: string;
-  employeeId: string;
-  hours: number;
-  enabled: boolean;
-}) {
-  const setOvertime = useSetOvertime(date);
-  const [value, setValue] = useState(String(hours));
-
-  useEffect(() => setValue(String(hours)), [hours]);
-
-  const commit = async () => {
-    const next = Number(value || 0);
-    if (!Number.isFinite(next) || next < 0 || next > 24) {
-      toast.error("Overtime must be between 0 and 24 hours");
-      setValue(String(hours));
-      return;
-    }
-    if (next === Number(hours)) return;
-    try {
-      await setOvertime.mutateAsync({ employeeId, hours: next });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save overtime");
-      setValue(String(hours));
-    }
-  };
-
-  return (
-    <Input
-      type="number"
-      min={0}
-      max={24}
-      step="0.5"
-      value={enabled ? value : ""}
-      disabled={!enabled || setOvertime.isPending}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-      className="mx-auto h-9 w-20 text-center tabular-nums"
-      placeholder={enabled ? "0" : "—"}
-    />
-  );
-}
-
-function MarkButton({
-  letter,
-  title,
-  active,
-  tone,
-  disabled,
-  onClick,
-}: {
-  letter: string;
-  title: string;
-  active: boolean;
-  tone: "present" | "absent";
-  disabled?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      aria-pressed={active}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "h-9 w-10 text-sm font-bold transition-colors first:border-r disabled:opacity-50",
-        !active && "bg-background text-muted-foreground",
-        !active && tone === "present" && "hover:bg-emerald-50 hover:text-emerald-700",
-        !active && tone === "absent" && "hover:bg-rose-50 hover:text-rose-700",
-        active && tone === "present" && "bg-emerald-600 text-white",
-        active && tone === "absent" && "bg-rose-600 text-white",
-      )}
-    >
-      {letter}
-    </button>
   );
 }
