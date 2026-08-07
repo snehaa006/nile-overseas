@@ -12,10 +12,11 @@ import {
   markAttendance,
   fetchPayrollMonth,
   savePayrollMonth,
+  setHoursWorked,
   setOvertime,
   updateEmployee,
 } from "@/shared/api/hr";
-import type { AttendanceStatus } from "@/shared/types/models";
+import type { AttendanceStatus, Employee } from "@/shared/types/models";
 import type { TablesInsert, TablesUpdate } from "@/shared/types/database";
 
 export function useEmployees() {
@@ -76,16 +77,29 @@ function useInvalidateAttendance(date: string) {
   const qc = useQueryClient();
   return () => {
     qc.invalidateQueries({ queryKey: qk.attendanceDay(date) });
-    // The payroll view sums the whole month, so it goes stale too.
-    qc.invalidateQueries({ queryKey: qk.attendanceMonth(date.slice(0, 7)) });
+    // The payroll view and month sheets sum the month, so they go stale too.
+    qc.invalidateQueries({ queryKey: ["attendance-month", date.slice(0, 7)] });
   };
 }
 
 export function useMarkAttendance(date: string) {
   const invalidate = useInvalidateAttendance(date);
   return useMutation({
-    mutationFn: (args: { employeeId: string; status: AttendanceStatus }) =>
-      markAttendance({ ...args, date }),
+    mutationFn: (args: {
+      employeeId: string;
+      status: AttendanceStatus;
+      shiftHours: number;
+      hours?: number;
+    }) => markAttendance({ ...args, date }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSetHoursWorked(date: string) {
+  const invalidate = useInvalidateAttendance(date);
+  return useMutation({
+    mutationFn: (args: { employeeId: string; hours: number }) =>
+      setHoursWorked({ ...args, date }),
     onSuccess: invalidate,
   });
 }
@@ -101,22 +115,77 @@ export function useClearAttendance(date: string) {
 export function useMarkAllAttendance(date: string) {
   const invalidate = useInvalidateAttendance(date);
   return useMutation({
-    mutationFn: (args: { employeeIds: string[]; status: AttendanceStatus }) =>
-      markAllAttendance({ ...args, date }),
+    mutationFn: (args: {
+      employees: Pick<Employee, "id" | "shift_hours">[];
+      status: AttendanceStatus;
+    }) => markAllAttendance({ ...args, date }),
     onSuccess: invalidate,
   });
 }
 
 /* -------------------------------- Payroll ------------------------------- */
 
-/** Attendance for a whole month — "YYYY-MM-01" through month end. */
-export function useAttendanceMonth(month: string) {
-  const from = `${month}-01`;
-  const to = monthEnd(month);
+/**
+ * Attendance for a whole month — the whole roster, or one worker when an
+ * employee id is given (their month sheet).
+ */
+export function useAttendanceMonth(month: string, employeeId?: string) {
   return useQuery({
-    queryKey: qk.attendanceMonth(month),
-    queryFn: () => fetchAttendanceRange(from, to),
+    queryKey: qk.attendanceMonth(month, employeeId),
+    queryFn: () => fetchAttendanceRange(`${month}-01`, monthEnd(month), employeeId),
   });
+}
+
+/** Marks one day for one worker from their month sheet. */
+export function useMarkAttendanceForMonth(month: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      employeeId: string;
+      date: string;
+      status: AttendanceStatus;
+      shiftHours: number;
+      hours?: number;
+    }) => markAttendance(args),
+    onSuccess: (_data, args) => invalidateMonth(qc, month, args.date),
+  });
+}
+
+export function useClearAttendanceForMonth(month: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { employeeId: string; date: string }) =>
+      clearAttendance(args),
+    onSuccess: (_data, args) => invalidateMonth(qc, month, args.date),
+  });
+}
+
+export function useSetHoursForMonth(month: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { employeeId: string; date: string; hours: number }) =>
+      setHoursWorked(args),
+    onSuccess: (_data, args) => invalidateMonth(qc, month, args.date),
+  });
+}
+
+export function useSetOvertimeForMonth(month: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { employeeId: string; date: string; hours: number }) =>
+      setOvertime(args),
+    onSuccess: (_data, args) => invalidateMonth(qc, month, args.date),
+  });
+}
+
+/** A month-sheet edit touches that day's view and both month views. */
+function invalidateMonth(
+  qc: ReturnType<typeof useQueryClient>,
+  month: string,
+  date: string,
+) {
+  qc.invalidateQueries({ queryKey: ["attendance-month", month] });
+  qc.invalidateQueries({ queryKey: qk.attendanceDay(date) });
 }
 
 export function usePayrollMonth(month: string) {
@@ -142,7 +211,7 @@ export function useSetOvertime(date: string) {
       setOvertime({ ...args, date }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.attendanceDay(date) });
-      qc.invalidateQueries({ queryKey: qk.attendanceMonth(date.slice(0, 7)) });
+      qc.invalidateQueries({ queryKey: ["attendance-month", date.slice(0, 7)] });
     },
   });
 }

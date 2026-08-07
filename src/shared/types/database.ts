@@ -340,6 +340,7 @@ export type Database = {
         Row: {
           created_at: string;
           employee_id: string;
+          hours_worked: number;
           id: string;
           overtime_hours: number;
           status: "present" | "absent";
@@ -348,6 +349,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           employee_id: string;
+          hours_worked?: number;
           id?: string;
           overtime_hours?: number;
           status: "present" | "absent";

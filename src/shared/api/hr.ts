@@ -74,12 +74,20 @@ export async function fetchAttendance(date: string): Promise<AttendanceRecord[]>
   return data;
 }
 
-/** Marks (or re-marks) a worker for a day — one row per worker per date. */
+/**
+ * Marks (or re-marks) a worker for a day — one row per worker per date.
+ * A present day starts at the worker's full shift; an absent day at zero.
+ * `hours` overrides that when a short day is being recorded directly.
+ */
 export async function markAttendance(args: {
   employeeId: string;
   date: string;
   status: AttendanceStatus;
+  shiftHours: number;
+  hours?: number;
 }): Promise<AttendanceRecord> {
+  const hoursWorked =
+    args.status === "absent" ? 0 : (args.hours ?? Number(args.shiftHours));
   const { data, error } = await supabase
     .from("attendance")
     .upsert(
@@ -87,6 +95,7 @@ export async function markAttendance(args: {
         employee_id: args.employeeId,
         work_date: args.date,
         status: args.status,
+        hours_worked: hoursWorked,
       },
       { onConflict: "employee_id,work_date" },
     )
@@ -96,16 +105,36 @@ export async function markAttendance(args: {
   return data;
 }
 
-/** Every attendance row between two dates, for the monthly payroll view. */
+/** Edits hours worked on a day the worker is already marked present. */
+export async function setHoursWorked(args: {
+  employeeId: string;
+  date: string;
+  hours: number;
+}): Promise<void> {
+  const { error } = await supabase
+    .from("attendance")
+    .update({ hours_worked: args.hours })
+    .eq("employee_id", args.employeeId)
+    .eq("work_date", args.date);
+  if (error) throw error;
+}
+
+/**
+ * Every attendance row between two dates — the whole roster for the payroll
+ * view, or one worker for their month sheet.
+ */
 export async function fetchAttendanceRange(
   from: string,
   to: string,
+  employeeId?: string,
 ): Promise<AttendanceRecord[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("attendance")
     .select("*")
     .gte("work_date", from)
     .lte("work_date", to);
+  if (employeeId) query = query.eq("employee_id", employeeId);
+  const { data, error } = await query.order("work_date");
   if (error) throw error;
   return data;
 }
@@ -166,16 +195,17 @@ export async function clearAttendance(args: {
 
 /** Marks every listed worker at once — the "all present" shortcut. */
 export async function markAllAttendance(args: {
-  employeeIds: string[];
+  employees: Pick<Employee, "id" | "shift_hours">[];
   date: string;
   status: AttendanceStatus;
 }): Promise<void> {
-  if (args.employeeIds.length === 0) return;
+  if (args.employees.length === 0) return;
   const { error } = await supabase.from("attendance").upsert(
-    args.employeeIds.map((employee_id) => ({
-      employee_id,
+    args.employees.map((employee) => ({
+      employee_id: employee.id,
       work_date: args.date,
       status: args.status,
+      hours_worked: args.status === "absent" ? 0 : Number(employee.shift_hours),
     })),
     { onConflict: "employee_id,work_date" },
   );
