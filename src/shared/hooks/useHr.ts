@@ -10,7 +10,9 @@ import {
   fetchEmployees,
   markAllAttendance,
   markAttendance,
+  fetchAdvances,
   fetchPayrollMonth,
+  saveAdvance,
   savePayrollMonth,
   setHoursWorked,
   setOvertime,
@@ -201,6 +203,22 @@ export function useSavePayrollMonth(month: string) {
     mutationFn: (workingDays: number) =>
       savePayrollMonth(`${month}-01`, workingDays),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.payrollMonth(month) }),
+  });
+}
+
+export function useAdvances(month: string) {
+  return useQuery({
+    queryKey: qk.advances(month),
+    queryFn: () => fetchAdvances(`${month}-01`),
+  });
+}
+
+export function useSaveAdvance(month: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { employeeId: string; amount: number }) =>
+      saveAdvance({ ...args, month: `${month}-01` }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.advances(month) }),
   });
 }
 

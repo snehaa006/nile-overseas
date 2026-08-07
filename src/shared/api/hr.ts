@@ -4,6 +4,7 @@ import type {
   AttendanceStatus,
   Employee,
   PayrollMonth,
+  SalaryAdvance,
 } from "@/shared/types/models";
 import type { TablesInsert, TablesUpdate } from "@/shared/types/database";
 
@@ -174,6 +175,38 @@ export async function savePayrollMonth(
   const { data, error } = await supabase
     .from("payroll_months")
     .upsert({ month, working_days: workingDays }, { onConflict: "month" })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** Advances drawn by each worker in a month. */
+export async function fetchAdvances(month: string): Promise<SalaryAdvance[]> {
+  const { data, error } = await supabase
+    .from("salary_advances")
+    .select("*")
+    .eq("month", month);
+  if (error) throw error;
+  return data;
+}
+
+/** Sets a worker's advance for a month — one running figure, not a ledger. */
+export async function saveAdvance(args: {
+  employeeId: string;
+  month: string;
+  amount: number;
+}): Promise<SalaryAdvance> {
+  const { data, error } = await supabase
+    .from("salary_advances")
+    .upsert(
+      {
+        employee_id: args.employeeId,
+        month: args.month,
+        amount: args.amount,
+      },
+      { onConflict: "employee_id,month" },
+    )
     .select()
     .single();
   if (error) throw error;

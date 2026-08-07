@@ -16,6 +16,7 @@ export function InlineNumberInput({
   disabled,
   className,
   placeholder,
+  invalidMessage,
 }: {
   value: number;
   onCommit: (next: number) => Promise<void>;
@@ -25,6 +26,7 @@ export function InlineNumberInput({
   disabled?: boolean;
   className?: string;
   placeholder?: string;
+  invalidMessage?: string;
 }) {
   const [draft, setDraft] = useState(String(value));
   const [saving, setSaving] = useState(false);
@@ -34,7 +36,7 @@ export function InlineNumberInput({
   const commit = async () => {
     const next = Number(draft);
     if (draft === "" || !Number.isFinite(next) || next < min || next > max) {
-      toast.error(`Enter a value between ${min} and ${max}`);
+      toast.error(invalidMessage ?? `Enter a value between ${min} and ${max}`);
       setDraft(String(value));
       return;
     }

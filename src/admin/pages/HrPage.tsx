@@ -12,7 +12,9 @@ import {
   useEmployees,
   useMarkAllAttendance,
   useMarkAttendance,
+  useAdvances,
   usePayrollMonth,
+  useSaveAdvance,
   useSavePayrollMonth,
   useSetHoursWorked,
   useSetOvertime,
@@ -37,6 +39,7 @@ import {
   type AttendanceRecord,
   type AttendanceStatus,
   type Employee,
+  type PayrollRow,
 } from "@/shared/types/models";
 
 /** Workforce roster plus day-by-day attendance marking. */
@@ -468,9 +471,11 @@ function AttendanceRow({
 
 function PayrollTab() {
   const [month, setMonth] = useState(dateKey().slice(0, 7));
+  const [query, setQuery] = useState("");
   const { data: employees, isLoading, isError, error, refetch } = useEmployees();
   const { data: records } = useAttendanceMonth(month);
   const { data: payrollMonth } = usePayrollMonth(month);
+  const { data: advances } = useAdvances(month);
 
   const workingDays = payrollMonth?.working_days ?? DEFAULT_WORKING_DAYS;
   const roster = employees ?? [];
@@ -486,6 +491,9 @@ function PayrollTab() {
       entry.hours += Number(record.hours_worked);
       entry.overtime += Number(record.overtime_hours);
     }
+    const advanceById = new Map(
+      (advances ?? []).map((a) => [a.employee_id, Number(a.amount)]),
+    );
     return roster.map((employee) => {
       const entry = tally.get(employee.id) ?? blank();
       return calcPayroll({
@@ -495,11 +503,14 @@ function PayrollTab() {
         absentDays: entry.absent,
         hoursWorked: entry.hours,
         overtimeHours: entry.overtime,
+        advance: advanceById.get(employee.id) ?? 0,
       });
     });
-  }, [roster, records, workingDays]);
+  }, [roster, records, advances, workingDays]);
 
-  const totalPay = rows.reduce((sum, r) => sum + r.totalPay, 0);
+  const shown = rows.filter((r) => filterWorkers([r.employee], query).length > 0);
+  const totalAdvance = rows.reduce((sum, r) => sum + r.advance, 0);
+  const totalNet = rows.reduce((sum, r) => sum + r.netPay, 0);
   const totalHours = rows.reduce((sum, r) => sum + r.hoursWorked, 0);
   const totalOvertime = rows.reduce((sum, r) => sum + r.overtimeHours, 0);
 
@@ -518,12 +529,14 @@ function PayrollTab() {
         <EmptyState title="No workers yet" description="Add a worker first." />
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-4">
-            <Tile label="Working days" value={workingDays} />
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
             <Tile label="Hours worked" value={totalHours} />
             <Tile label="Overtime hours" value={totalOvertime} />
-            <Tile label="Payable" value={formatCurrency(totalPay)} />
+            <Tile label="Advances" value={formatCurrency(totalAdvance)} />
+            <Tile label="Net payable" value={formatCurrency(totalNet)} />
           </div>
+
+          <WorkerSearchField value={query} onChange={setQuery} />
 
           <div className="overflow-hidden rounded-xl border bg-card">
             <Table>
@@ -532,49 +545,37 @@ function PayrollTab() {
                   <TableHead>Worker</TableHead>
                   <TableHead className="text-right">Present</TableHead>
                   <TableHead className="text-right">Hours</TableHead>
-                  <TableHead className="text-right">Day rate</TableHead>
-                  <TableHead className="text-right">Hourly</TableHead>
                   <TableHead className="text-right">OT hrs</TableHead>
-                  <TableHead className="text-right">OT pay</TableHead>
-                  <TableHead className="text-right">Payable</TableHead>
+                  <TableHead className="text-right">Earned</TableHead>
+                  <TableHead className="w-[1%] text-center">Advance</TableHead>
+                  <TableHead className="text-right">Net payable</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row.employee.id}>
-                    <TableCell>
-                      <EmployeeCell employee={row.employee} />
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {row.presentDays}
-                      <span className="text-muted-foreground">/{workingDays}</span>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {row.hoursWorked || "—"}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {formatCurrencyExact(row.dayRate)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {formatCurrencyExact(row.hourlyRate)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {row.overtimeHours || "—"}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {row.overtimePay ? formatCurrencyExact(row.overtimePay) : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums">
-                      {formatCurrencyExact(row.totalPay)}
+                {shown.map((row) => (
+                  <PayrollRowView
+                    key={row.employee.id}
+                    row={row}
+                    month={month}
+                    workingDays={workingDays}
+                  />
+                ))}
+                {shown.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                      No worker matches “{query}”.
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
-                  <TableCell colSpan={7} className="font-medium">
+                  <TableCell colSpan={5} className="font-medium">
                     Total
                   </TableCell>
+                  <TableCell className="text-center font-medium tabular-nums text-amber-700">
+                    {totalAdvance ? formatCurrency(totalAdvance) : "—"}
+                  </TableCell>
                   <TableCell className="text-right font-bold tabular-nums">
-                    {formatCurrencyExact(totalPay)}
+                    {formatCurrencyExact(totalNet)}
                   </TableCell>
                 </TableRow>
               </TableBody>
@@ -583,6 +584,80 @@ function PayrollTab() {
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * One worker's month. Rates live under the name rather than in their own
+ * columns — the table has to stay readable now that advances are in it.
+ */
+function PayrollRowView({
+  row,
+  month,
+  workingDays,
+}: {
+  row: PayrollRow;
+  month: string;
+  workingDays: number;
+}) {
+  const saveAdvance = useSaveAdvance(month);
+
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">
+            {initials(row.employee.name) || <UserRound className="h-4 w-4" />}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate font-medium">{row.employee.name}</p>
+            <p
+              className="text-xs text-muted-foreground"
+              title={`Day rate ${formatCurrencyExact(row.dayRate)} over a ${row.employee.shift_hours}h shift`}
+            >
+              {formatCurrencyExact(row.hourlyRate)}/hr
+            </p>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {row.presentDays}
+        <span className="text-muted-foreground">/{workingDays}</span>
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {row.hoursWorked || "—"}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {row.overtimeHours || "—"}
+      </TableCell>
+      <TableCell className="text-right tabular-nums text-muted-foreground">
+        {formatCurrencyExact(row.totalPay)}
+      </TableCell>
+      <TableCell className="text-center">
+        <InlineNumberInput
+          value={row.advance}
+          min={0}
+          max={10_000_000}
+          step="100"
+          className="w-28"
+          placeholder="0"
+          invalidMessage="Enter a valid advance amount"
+          onCommit={(amount) =>
+            saveAdvance
+              .mutateAsync({ employeeId: row.employee.id, amount })
+              .then(() => {})
+          }
+        />
+      </TableCell>
+      <TableCell
+        className={cn(
+          "text-right font-semibold tabular-nums",
+          row.netPay < 0 && "text-destructive",
+        )}
+      >
+        {formatCurrencyExact(row.netPay)}
+      </TableCell>
+    </TableRow>
   );
 }
 
