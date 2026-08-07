@@ -89,6 +89,7 @@ RLS is enabled on every table. The model:
 | daily_stock      | none                             | full |
 | employees        | none                             | full |
 | payroll_months   | none                             | full |
+| salary_advances  | none                             | full |
 | attendance       | none                             | full |
 | site_settings    | read                             | update |
 | storage objects  | read `blanket-images`            | write/delete |
@@ -98,7 +99,8 @@ Server-side invariants (not trusted to the client):
 - **Employee ID** auto-issued from a sequence (`EMP-0001`), never client-supplied;
   attendance is unique per worker per day, so a re-mark overwrites rather than duplicates.
 - **Payroll** derives from attendance: `day rate = salary / working days in month`,
-  `hourly = day rate / shift hours`, `pay = (hours worked + OT hours) x hourly`.
+  `hourly = day rate / shift hours`,
+  `net pay = (hours worked + OT hours) x hourly - advance drawn`.
   Marking someone present books a full shift; a short day is edited down to the
   hours actually worked. Working days live in `payroll_months` (default 26).
 - **Closing stock** is a generated column: `opening + production − sales`.

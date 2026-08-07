@@ -16,6 +16,7 @@ export type ContactMessage = Tables<"contact_messages">;
 export type Employee = Tables<"employees">;
 export type AttendanceRecord = Tables<"attendance">;
 export type PayrollMonth = Tables<"payroll_months">;
+export type SalaryAdvance = Tables<"salary_advances">;
 /** A worker is either present or absent on a given day — nothing in between. */
 export type AttendanceStatus = AttendanceRecord["status"];
 
@@ -31,6 +32,8 @@ export type PayrollRow = {
   basePay: number;
   overtimePay: number;
   totalPay: number;
+  advance: number;
+  netPay: number;
 };
 
 /** Default working days when a month hasn't been configured yet. */
@@ -43,7 +46,8 @@ export const DEFAULT_WORKING_DAYS = 26;
  *
  * Base pay is then hours-based rather than day-based: a present day normally
  * carries a full shift, but a half day carries only the hours worked, and
- * pays accordingly. Overtime is paid at the same hourly rate.
+ * pays accordingly. Overtime is paid at the same hourly rate, and any advance
+ * drawn during the month is deducted from the balance.
  */
 export function calcPayroll(args: {
   employee: Employee;
@@ -52,13 +56,15 @@ export function calcPayroll(args: {
   absentDays: number;
   hoursWorked: number;
   overtimeHours: number;
+  advance: number;
 }): PayrollRow {
   const { employee, workingDays, presentDays, absentDays } = args;
-  const { hoursWorked, overtimeHours } = args;
+  const { hoursWorked, overtimeHours, advance } = args;
   const dayRate = workingDays > 0 ? Number(employee.salary) / workingDays : 0;
   const hourlyRate = employee.shift_hours > 0 ? dayRate / Number(employee.shift_hours) : 0;
   const basePay = hourlyRate * hoursWorked;
   const overtimePay = hourlyRate * overtimeHours;
+  const totalPay = basePay + overtimePay;
 
   return {
     employee,
@@ -70,7 +76,10 @@ export function calcPayroll(args: {
     hourlyRate,
     basePay,
     overtimePay,
-    totalPay: basePay + overtimePay,
+    totalPay,
+    advance,
+    // Advances already paid out mid-month come off what's still owed.
+    netPay: totalPay - advance,
   };
 }
 export type ProductionEntry = Tables<"production_entries">;

@@ -3,15 +3,18 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowLeft, Search } from "lucide-react";
 import {
+  useAdvances,
   useAttendanceMonth,
   useClearAttendanceForMonth,
   useEmployee,
   useEmployees,
   useMarkAttendanceForMonth,
+  useSaveAdvance,
   useSetHoursForMonth,
   useSetOvertimeForMonth,
 } from "@/shared/hooks/useHr";
 import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
 import { MonthPicker } from "@/shared/components/ui/month-picker";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -19,7 +22,7 @@ import {
 import { LoadingState, ErrorState } from "@/shared/components/StateViews";
 import { AttendanceToggle } from "../components/AttendanceToggle";
 import { InlineNumberInput } from "../components/InlineNumberInput";
-import { dateKey } from "@/shared/utils/format";
+import { dateKey, formatCurrency } from "@/shared/utils/format";
 import { cn } from "@/shared/utils/cn";
 import type { AttendanceRecord, AttendanceStatus, Employee } from "@/shared/types/models";
 
@@ -32,6 +35,10 @@ export function WorkerAttendancePage() {
 
   const { data: employee, isLoading, isError, error, refetch } = useEmployee(id);
   const { data: records } = useAttendanceMonth(month, id);
+  const { data: advances } = useAdvances(month);
+  const advance = Number(
+    (advances ?? []).find((a) => a.employee_id === id)?.amount ?? 0,
+  );
 
   const byDate = useMemo(() => {
     const map = new Map<string, AttendanceRecord>();
@@ -72,14 +79,16 @@ export function WorkerAttendancePage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <MonthPicker value={month} onChange={setMonth} />
+        <AdvanceField month={month} employeeId={employee.id} advance={advance} />
         <WorkerSearch currentId={employee.id} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Tile label="Present" value={present} />
         <Tile label="Absent" value={absent} />
         <Tile label="Hours" value={hours} />
         <Tile label="OT hrs" value={overtime} />
+        <Tile label="Advance" value={formatCurrency(advance)} />
       </div>
 
       <div className="overflow-hidden rounded-xl border bg-card">
@@ -191,6 +200,34 @@ function DayRow({
   );
 }
 
+/** The advance this worker has drawn against the month, editable in place. */
+function AdvanceField({
+  month,
+  employeeId,
+  advance,
+}: {
+  month: string;
+  employeeId: string;
+  advance: number;
+}) {
+  const save = useSaveAdvance(month);
+  return (
+    <div className="flex items-center gap-2">
+      <Label className="text-sm text-muted-foreground">Advance (₹)</Label>
+      <InlineNumberInput
+        value={advance}
+        min={0}
+        max={10_000_000}
+        step="100"
+        className="w-28"
+        placeholder="0"
+        invalidMessage="Enter a valid advance amount"
+        onCommit={(amount) => save.mutateAsync({ employeeId, amount }).then(() => {})}
+      />
+    </div>
+  );
+}
+
 /** Type a name or employee ID to jump to that worker's sheet. */
 function WorkerSearch({ currentId }: { currentId: string }) {
   const { data: employees } = useEmployees();
@@ -244,7 +281,7 @@ function WorkerSearch({ currentId }: { currentId: string }) {
   );
 }
 
-function Tile({ label, value }: { label: string; value: number }) {
+function Tile({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-xl border bg-card px-4 py-3">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
