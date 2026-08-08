@@ -141,6 +141,9 @@ npm run build             # typecheck + production build
 | `VITE_SUPABASE_URL` | `https://nstwdxgrefzzqozuvejy.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | publishable key (safe for the browser; RLS enforces access) |
 
+The login form takes an email and password, so any account created in Supabase
+Auth can sign in.
+
 ### Admin login
 
 An admin account was provisioned (signup is disabled by design):
