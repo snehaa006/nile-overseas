@@ -12,9 +12,8 @@ import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
 import { Spinner } from "@/shared/components/StateViews";
 
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
-
 const schema = z.object({
+  email: z.string().email("Enter a valid email"),
   password: z.string().min(1, "Password is required"),
 });
 type FormValues = z.infer<typeof schema>;
@@ -37,12 +36,12 @@ export function LoginPage() {
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
     try {
-      await signIn(ADMIN_EMAIL, values.password);
+      await signIn(values.email.trim(), values.password);
       toast.success("Welcome back");
       navigate("/admin", { replace: true });
     } catch {
       // Deliberately generic — avoids confirming whether an account exists.
-      toast.error("Incorrect password");
+      toast.error("Incorrect email or password");
     } finally {
       setSubmitting(false);
     }
@@ -55,17 +54,29 @@ export function LoginPage() {
           <CardTitle className="font-serif text-2xl text-primary">
             Nile Overseas Admin
           </CardTitle>
-          <CardDescription>Enter the staff password to continue</CardDescription>
+          <CardDescription>Sign in with your staff account</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="username"
+                autoFocus
+                {...register("email")}
+              />
+              {errors.email && (
+                <p className="text-xs text-destructive">{errors.email.message}</p>
+              )}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
                 autoComplete="current-password"
-                autoFocus
                 {...register("password")}
               />
               {errors.password && (
