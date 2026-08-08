@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useSettings } from "@/shared/hooks/useSettings";
 import { useContactMessages } from "@/shared/hooks/useMessages";
+import { canAccessHr } from "@/shared/lib/access";
 import { cn } from "@/shared/utils/cn";
 import { Button } from "@/shared/components/ui/button";
 
@@ -36,6 +37,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { data: settings } = useSettings();
   const { data: messages } = useContactMessages();
   const unread = (messages ?? []).filter((m) => !m.is_read).length;
+  // HR carries payroll data, so it only appears for the owner account.
+  const visible = canAccessHr(session?.user.email)
+    ? items
+    : items.filter((item) => item.to !== "/admin/hr");
 
   return (
     <div className="flex h-full flex-col">
@@ -49,7 +54,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 space-y-1 p-4">
-        {items.map((item) => (
+        {visible.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
