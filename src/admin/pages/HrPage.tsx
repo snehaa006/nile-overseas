@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ChevronRight, CircleSlash, Plus, Search, UserRound } from "lucide-react";
+import {
+  ArrowDownAZ, ChevronRight, CircleSlash, Hash, Plus, Search, UserRound,
+} from "lucide-react";
 import {
   useAdvances,
   useAttendanceDay,
@@ -232,18 +234,92 @@ function usePayrollRows(month: string) {
 
 /* ------------------------------- Workers -------------------------------- */
 
+type WorkerSortKey = "id" | "name";
+
+/** Employee codes are zero-padded (EMP-0001…), so plain string order is numeric order too. */
+function sortWorkerRows(rows: PayrollRow[], sortBy: WorkerSortKey): PayrollRow[] {
+  return [...rows].sort((a, b) =>
+    sortBy === "id"
+      ? a.employee.employee_code.localeCompare(b.employee.employee_code)
+      : a.employee.name.localeCompare(b.employee.name),
+  );
+}
+
+function WorkerSortToggle({
+  value,
+  onChange,
+}: {
+  value: WorkerSortKey;
+  onChange: (next: WorkerSortKey) => void;
+}) {
+  return (
+    <div className="inline-flex overflow-hidden rounded-lg border">
+      <SortButton
+        label="ID"
+        icon={<Hash className="h-3.5 w-3.5" />}
+        title="Sort by worker ID"
+        active={value === "id"}
+        onClick={() => onChange("id")}
+      />
+      <SortButton
+        label="A–Z"
+        icon={<ArrowDownAZ className="h-3.5 w-3.5" />}
+        title="Sort alphabetically by name"
+        active={value === "name"}
+        onClick={() => onChange("name")}
+      />
+    </div>
+  );
+}
+
+function SortButton({
+  label,
+  icon,
+  title,
+  active,
+  onClick,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  title: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "flex h-9 items-center gap-1.5 px-3 text-sm font-medium transition-colors first:border-r",
+        active
+          ? "bg-primary text-primary-foreground"
+          : "bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+      )}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
 function WorkersTab() {
   const month = dateKey().slice(0, 7);
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [sortBy, setSortBy] = useState<WorkerSortKey>("name");
   const { rows, roster, workingDays, isLoading, isError, error, refetch } =
     usePayrollRows(month);
 
-  const shown = rows.filter((row) => matches(row.employee, query));
+  const shown = sortWorkerRows(rows, sortBy).filter((row) => matches(row.employee, query));
 
   return (
     <div className="space-y-6">
-      <SearchField value={query} onChange={setQuery} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <SearchField value={query} onChange={setQuery} />
+        <WorkerSortToggle value={sortBy} onChange={setSortBy} />
+      </div>
 
       {isLoading ? (
         <LoadingState />
