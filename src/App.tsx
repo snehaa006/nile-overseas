@@ -10,6 +10,7 @@ import { ContactPage } from "@/website/pages/ContactPage";
 
 import { LoginPage } from "@/admin/pages/LoginPage";
 import { ProtectedRoute } from "@/admin/ProtectedRoute";
+import { HrRoute } from "@/admin/HrRoute";
 import { AdminLayout } from "@/admin/AdminLayout";
 import { DashboardPage } from "@/admin/pages/DashboardPage";
 import { ProductsAdminPage } from "@/admin/pages/ProductsAdminPage";
@@ -57,10 +58,13 @@ export function App() {
         <Route path="stock" element={<StockPage />} />
         <Route path="process" element={<ProcessPage />} />
         <Route path="production" element={<ProductionPage />} />
-        <Route path="hr" element={<HrPage />} />
-        <Route path="hr/new" element={<WorkerEditorPage />} />
-        <Route path="hr/:id" element={<WorkerDetailPage />} />
-        <Route path="hr/:id/edit" element={<WorkerEditorPage />} />
+        <Route path="hr" element={<HrRoute><HrPage /></HrRoute>} />
+        <Route path="hr/new" element={<HrRoute><WorkerEditorPage /></HrRoute>} />
+        <Route path="hr/:id" element={<HrRoute><WorkerDetailPage /></HrRoute>} />
+        <Route
+          path="hr/:id/edit"
+          element={<HrRoute><WorkerEditorPage /></HrRoute>}
+        />
         <Route path="settings" element={<WebsiteSettingsPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="messages" element={<MessagesPage />} />

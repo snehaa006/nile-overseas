@@ -87,10 +87,10 @@ RLS is enabled on every table. The model:
 | blankets         | read where `is_active = true`    | full |
 | blanket_images   | read (only for active blankets)  | full |
 | daily_stock      | none                             | full |
-| employees        | none                             | full |
-| payroll_months   | none                             | full |
-| salary_advances  | none                             | full |
-| attendance       | none                             | full |
+| employees        | none                             | HR admins only |
+| payroll_months   | none                             | HR admins only |
+| salary_advances  | none                             | HR admins only |
+| attendance       | none                             | HR admins only |
 | site_settings    | read                             | update |
 | storage objects  | read `blanket-images`            | write/delete |
 
@@ -149,6 +149,12 @@ An admin account was provisioned (signup is disabled by design):
 - **Temp password:** `NileAdmin@2026` — **change it after first login.**
 
 Create more admins in Supabase Dashboard → Authentication → Add user.
+
+**HR is owner-only.** Other admin accounts share the dashboard but never see
+the HR menu, are redirected away from `/admin/hr/*`, and are refused by RLS if
+they query the HR tables directly. The allowed addresses live in two places
+that must be kept in step: `HR_ADMIN_EMAILS` in `src/shared/lib/access.ts` and
+`public.hr_admin()` (migration `0018`).
 
 ---
 
