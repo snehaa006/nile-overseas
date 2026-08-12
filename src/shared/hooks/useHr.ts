@@ -13,6 +13,7 @@ import {
   fetchSalaryPayments,
   markAllAttendance,
   markAttendance,
+  markAttendanceForDates,
   markSalariesPaid,
   markSalaryPaid,
   saveAdvance,
@@ -183,6 +184,20 @@ export function useSetHoursForMonth(month: string) {
   return useMutation({
     mutationFn: (args: { employeeId: string; date: string; hours: number }) =>
       setHoursWorked(args),
+    onSuccess: () => invalidateMonth(qc, month),
+  });
+}
+
+/** Fills a worker's whole month in one go — the "mark all P / A" shortcut. */
+export function useMarkMonthForEmployee(month: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      employeeId: string;
+      dates: string[];
+      status: AttendanceStatus;
+      shiftHours: number;
+    }) => markAttendanceForDates(args),
     onSuccess: () => invalidateMonth(qc, month),
   });
 }

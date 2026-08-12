@@ -220,6 +220,30 @@ export async function saveAdvance(args: {
   return data;
 }
 
+/**
+ * Marks one worker across many days at once — the "all present" shortcut on
+ * a worker's month sheet. Days already marked are overwritten, so a month can
+ * be filled in one go and then corrected day by day.
+ */
+export async function markAttendanceForDates(args: {
+  employeeId: string;
+  dates: string[];
+  status: AttendanceStatus;
+  shiftHours: number;
+}): Promise<void> {
+  if (args.dates.length === 0) return;
+  const { error } = await supabase.from("attendance").upsert(
+    args.dates.map((date) => ({
+      employee_id: args.employeeId,
+      work_date: date,
+      status: args.status,
+      hours_worked: args.status === "absent" ? 0 : Number(args.shiftHours),
+    })),
+    { onConflict: "employee_id,work_date" },
+  );
+  if (error) throw error;
+}
+
 /* ------------------------------- Payouts -------------------------------- */
 
 /** Salaries already handed over for a month — a row per worker paid. */
