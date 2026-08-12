@@ -10,12 +10,16 @@ import {
   fetchEmployee,
   fetchEmployees,
   fetchPayrollMonth,
+  fetchSalaryPayments,
   markAllAttendance,
   markAttendance,
+  markSalariesPaid,
+  markSalaryPaid,
   saveAdvance,
   savePayrollMonth,
   setHoursWorked,
   setOvertime,
+  unmarkSalaryPaid,
   updateEmployee,
 } from "@/shared/api/hr";
 import type { AttendanceStatus, Employee } from "@/shared/types/models";
@@ -229,6 +233,44 @@ export function useSaveAdvance(month: string) {
       bankAdvance: number;
     }) => saveAdvance({ ...args, month: `${month}-01` }),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.advances(month) }),
+  });
+}
+
+/* -------------------------------- Payouts ------------------------------- */
+
+/** Who has already been paid for a month. */
+export function useSalaryPayments(month: string) {
+  return useQuery({
+    queryKey: qk.salaryPayments(month),
+    queryFn: () => fetchSalaryPayments(`${month}-01`),
+  });
+}
+
+/** Flips one worker's payout for a month between paid and outstanding. */
+export function useSetSalaryPaid(month: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { employeeId: string; amount: number; paid: boolean }) =>
+      args.paid
+        ? markSalaryPaid({
+            employeeId: args.employeeId,
+            month: `${month}-01`,
+            amount: args.amount,
+          }).then(() => {})
+        : unmarkSalaryPaid({ employeeId: args.employeeId, month: `${month}-01` }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: qk.salaryPayments(month) }),
+  });
+}
+
+/** Marks everyone still outstanding as paid in one go. */
+export function useMarkAllSalariesPaid(month: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payouts: { employeeId: string; amount: number }[]) =>
+      markSalariesPaid({ month: `${month}-01`, payouts }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: qk.salaryPayments(month) }),
   });
 }
 

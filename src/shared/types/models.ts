@@ -17,6 +17,7 @@ export type Employee = Tables<"employees">;
 export type AttendanceRecord = Tables<"attendance">;
 export type PayrollMonth = Tables<"payroll_months">;
 export type SalaryAdvance = Tables<"salary_advances">;
+export type SalaryPayment = Tables<"salary_payments">;
 /** A worker is either present or absent on a given day — nothing in between. */
 export type AttendanceStatus = AttendanceRecord["status"];
 

@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  ArrowDownAZ, ChevronRight, CircleSlash, Hash, Plus, Search, UserRound,
+  ArrowDownAZ, Check, ChevronRight, CircleSlash, FileDown, Hash, Plus, Search,
+  UserRound,
 } from "lucide-react";
 import {
   useAdvances,
@@ -11,11 +12,14 @@ import {
   useClearAttendanceForDay,
   useEmployees,
   useMarkAllAttendance,
+  useMarkAllSalariesPaid,
   useMarkAttendanceForDay,
   usePayrollMonth,
+  useSalaryPayments,
   useSavePayrollMonth,
   useSetHoursForDay,
   useSetOvertimeForDay,
+  useSetSalaryPaid,
 } from "@/shared/hooks/useHr";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -29,7 +33,10 @@ import {
 import { LoadingState, ErrorState, EmptyState, Spinner } from "@/shared/components/StateViews";
 import { AttendanceToggle } from "../components/AttendanceToggle";
 import { InlineNumberInput } from "../components/InlineNumberInput";
-import { dateKey, formatCurrency, formatCurrencyExact, formatMonth } from "@/shared/utils/format";
+import { exportPayrollPdf } from "../components/payrollPdf";
+import {
+  dateKey, formatCurrency, formatCurrencyExact, formatDate, formatMonth,
+} from "@/shared/utils/format";
 import { cn } from "@/shared/utils/cn";
 import {
   calcPayroll,
@@ -38,6 +45,7 @@ import {
   type AttendanceStatus,
   type Employee,
   type PayrollRow,
+  type SalaryPayment,
 } from "@/shared/types/models";
 
 /**
@@ -585,15 +593,84 @@ function PayrollTab() {
   const { rows, roster, workingDays, isLoading, isError, error, refetch } =
     usePayrollRows(month);
 
+  const { data: payments } = useSalaryPayments(month);
+  const markAllPaid = useMarkAllSalariesPaid(month);
+
+  const paidById = useMemo(() => {
+    const map = new Map<string, SalaryPayment>();
+    for (const payment of payments ?? []) map.set(payment.employee_id, payment);
+    return map;
+  }, [payments]);
+
   const shown = rows.filter((row) => matches(row.employee, query));
   const total = (pick: (row: PayrollRow) => number) =>
     rows.reduce((sum, row) => sum + pick(row), 0);
+
+  const unpaid = rows.filter((row) => !paidById.has(row.employee.id));
+  const paidTotal = rows
+    .filter((row) => paidById.has(row.employee.id))
+    .reduce((sum, row) => sum + row.netPay, 0);
+
+  /** The whole month, not just the search hits — a sheet with gaps is worse than none. */
+  const handleExport = () => {
+    try {
+      exportPayrollPdf({
+        month,
+        workingDays,
+        rows,
+        paymentsByEmployee: paidById,
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not open the print view");
+    }
+  };
+
+  const handleMarkAllPaid = async () => {
+    try {
+      await markAllPaid.mutateAsync(
+        unpaid.map((row) => ({ employeeId: row.employee.id, amount: row.netPay })),
+      );
+      toast.success(
+        `Marked ${unpaid.length} ${unpaid.length === 1 ? "salary" : "salaries"} paid`,
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to mark salaries paid");
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <MonthPicker value={month} onChange={setMonth} />
         <WorkingDaysField month={month} workingDays={workingDays} />
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleMarkAllPaid}
+            disabled={markAllPaid.isPending || unpaid.length === 0}
+            title={
+              unpaid.length === 0
+                ? "Everyone is already marked paid for this month"
+                : `Mark ${unpaid.length} outstanding ${unpaid.length === 1 ? "salary" : "salaries"} paid`
+            }
+          >
+            {markAllPaid.isPending ? (
+              <Spinner className="h-4 w-4" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
+            Mark all paid
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleExport}
+            disabled={roster.length === 0}
+            title={`Export ${formatMonth(`${month}-01`)} salaries as PDF`}
+          >
+            <FileDown className="h-4 w-4" /> Export PDF
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -604,11 +681,17 @@ function PayrollTab() {
         <EmptyState title="No workers yet" description="Add a worker first." />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
             <Tile label="Hours worked" value={total((r) => r.hoursWorked)} />
             <Tile label="Overtime hours" value={total((r) => r.overtimeHours)} />
             <Tile label="Advances" value={formatCurrency(total((r) => r.advance))} />
             <Tile label="Net payable" value={formatCurrency(total((r) => r.netPay))} />
+            <Tile label="Paid" value={formatCurrency(paidTotal)} tone="present" />
+            <Tile
+              label={`Outstanding · ${unpaid.length}`}
+              value={formatCurrency(unpaid.reduce((sum, row) => sum + row.netPay, 0))}
+              tone="absent"
+            />
           </div>
 
           <SearchField value={query} onChange={setQuery} />
@@ -625,6 +708,7 @@ function PayrollTab() {
                   <TableHead className="text-right">Cash adv.</TableHead>
                   <TableHead className="text-right">Bank adv.</TableHead>
                   <TableHead className="text-right">Net payable</TableHead>
+                  <TableHead className="text-center">Paid</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -665,9 +749,20 @@ function PayrollTab() {
                     >
                       {formatCurrencyExact(row.netPay)}
                     </TableCell>
+                    <TableCell
+                      className="text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <PaidToggle
+                        month={month}
+                        employeeId={row.employee.id}
+                        netPay={row.netPay}
+                        payment={paidById.get(row.employee.id)}
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
-                {shown.length === 0 && <NoMatch query={query} colSpan={8} />}
+                {shown.length === 0 && <NoMatch query={query} colSpan={9} />}
 
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
                   <TableCell colSpan={4} className="font-medium">
@@ -685,6 +780,9 @@ function PayrollTab() {
                   <TableCell className="text-right font-bold tabular-nums">
                     {formatCurrencyExact(total((r) => r.netPay))}
                   </TableCell>
+                  <TableCell className="text-center text-xs text-muted-foreground">
+                    {rows.length - unpaid.length}/{rows.length}
+                  </TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -692,6 +790,61 @@ function PayrollTab() {
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * Whether this worker's month has been handed over. Paid shows the date it
+ * was marked; clicking a paid chip puts it back to outstanding, so a
+ * mis-click is one click to undo.
+ */
+function PaidToggle({
+  month,
+  employeeId,
+  netPay,
+  payment,
+}: {
+  month: string;
+  employeeId: string;
+  netPay: number;
+  payment?: SalaryPayment;
+}) {
+  const setPaid = useSetSalaryPaid(month);
+  const paid = Boolean(payment);
+
+  const toggle = async () => {
+    try {
+      await setPaid.mutateAsync({ employeeId, amount: netPay, paid: !paid });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update payment");
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      disabled={setPaid.isPending}
+      aria-pressed={paid}
+      title={
+        paid
+          ? `Paid on ${formatDate(payment!.paid_on)} — click to mark unpaid`
+          : "Mark this salary as paid"
+      }
+      className={cn(
+        "inline-flex min-w-[6.5rem] items-center justify-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors disabled:opacity-50",
+        paid
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+          : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+      )}
+    >
+      {setPaid.isPending ? (
+        <Spinner className="h-3.5 w-3.5" />
+      ) : paid ? (
+        <Check className="h-3.5 w-3.5" />
+      ) : null}
+      {paid ? formatDate(payment!.paid_on).replace(/ \d{4}$/, "") : "Mark paid"}
+    </button>
   );
 }
 

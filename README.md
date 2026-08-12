@@ -90,6 +90,7 @@ RLS is enabled on every table. The model:
 | employees        | none                             | HR admins only |
 | payroll_months   | none                             | HR admins only |
 | salary_advances  | none                             | HR admins only |
+| salary_payments  | none                             | HR admins only |
 | attendance       | none                             | HR admins only |
 | site_settings    | read                             | update |
 | storage objects  | read `blanket-images`            | write/delete |
@@ -103,6 +104,11 @@ Server-side invariants (not trusted to the client):
   `net pay = (hours worked + OT hours) x hourly - (cash + bank advance)`.
   Marking someone present books a full shift; a short day is edited down to the
   hours actually worked. Working days live in `payroll_months` (default 26).
+- **Payouts** are recorded separately from what is owed: a `salary_payments`
+  row per worker per month means that salary has been handed over (no row =
+  still outstanding, so un-marking is a delete). The row snapshots the net
+  payable at the moment it was marked, so a later attendance correction never
+  rewrites what was recorded as paid.
 - **Closing stock** is a generated column: `opening + production − sales`.
 - **Opening stock carries forward day to day** via triggers, so monthly and
   yearly totals are just rollups (`blanket_monthly_stock`, `blanket_yearly_stock`)
@@ -181,6 +187,7 @@ that must be kept in step: `HR_ADMIN_EMAILS` in `src/shared/lib/access.ts` and
 | Reports + charts | `ReportsPage.tsx` |
 | CMS (settings) | `WebsiteSettingsPage.tsx` |
 | HR — roster, one day's attendance, month payroll | `HrPage.tsx` |
+| Payroll PDF export + paid/unpaid marking | `admin/components/payrollPdf.ts`, `shared/utils/pdf.ts` |
 | One worker: details, month attendance, OT, advances, pay | `WorkerDetailPage.tsx` |
 | Add / edit / remove a worker | `WorkerEditorPage.tsx` |
 ```

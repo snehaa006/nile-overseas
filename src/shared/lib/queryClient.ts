@@ -44,6 +44,7 @@ export const qk = {
     ["attendance-month", month, employeeId ?? "all"] as const,
   payrollMonth: (month: string) => ["payroll-month", month] as const,
   advances: (month: string) => ["advances", month] as const,
+  salaryPayments: (month: string) => ["salary-payments", month] as const,
   productionEntries: ["production-entries"] as const,
   agentSummary: (period: "month" | "year") => ["agent-summary", period] as const,
   customerSummary: (period: "month" | "year") => ["customer-summary", period] as const,
