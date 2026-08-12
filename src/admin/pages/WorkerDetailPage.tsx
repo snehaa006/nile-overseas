@@ -8,6 +8,7 @@ import {
   useClearAttendanceForMonth,
   useEmployee,
   useMarkAttendanceForMonth,
+  useDepartments,
   useMarkMonthForEmployee,
   usePayrollMonth,
   useSaveAdvance,
@@ -47,6 +48,7 @@ export function WorkerDetailPage() {
   const [month, setMonth] = useState(dateKey().slice(0, 7));
 
   const { data: employee, isLoading, isError, error, refetch } = useEmployee(id);
+  const { data: departments } = useDepartments();
   const { data: records } = useAttendanceMonth(month, id);
   const { data: advances } = useAdvances(month);
   const { data: payrollMonth } = usePayrollMonth(month);
@@ -110,7 +112,14 @@ export function WorkerDetailPage() {
       </div>
 
       <Card>
-        <CardContent className="grid gap-x-6 gap-y-4 p-6 sm:grid-cols-4">
+        <CardContent className="grid gap-x-6 gap-y-4 p-6 sm:grid-cols-3 lg:grid-cols-5">
+          <Detail
+            label="Department"
+            value={
+              (departments ?? []).find((d) => d.id === employee.department_id)?.name ??
+              "—"
+            }
+          />
           <Detail label="Designation" value={employee.designation} />
           <Detail label="Monthly salary" value={formatCurrency(employee.salary)} />
           <Detail label="Shift" value={`${employee.shift_hours} hrs/day`} />

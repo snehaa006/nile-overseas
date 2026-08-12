@@ -312,9 +312,24 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["contact_messages"]["Insert"]>;
         Relationships: [];
       };
+      departments: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["departments"]["Insert"]>;
+        Relationships: [];
+      };
       employees: {
         Row: {
           created_at: string;
+          department_id: string | null;
           designation: string;
           employee_code: string;
           id: string;
@@ -325,6 +340,7 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
+          department_id?: string | null;
           designation: string;
           employee_code?: string;
           id?: string;

@@ -37,6 +37,7 @@ export const qk = {
   reviews: ["reviews"] as const,
   reviewsAll: ["reviews", "all"] as const,
   contactMessages: ["contact-messages"] as const,
+  departments: ["departments"] as const,
   employees: ["employees"] as const,
   employee: (id: string) => ["employee", id] as const,
   attendanceDay: (date: string) => ["attendance-day", date] as const,

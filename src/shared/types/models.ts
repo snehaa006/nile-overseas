@@ -13,6 +13,7 @@ export type Client = Tables<"clients">;
 export type TeamMember = Tables<"team_members">;
 export type Review = Tables<"reviews">;
 export type ContactMessage = Tables<"contact_messages">;
+export type Department = Tables<"departments">;
 export type Employee = Tables<"employees">;
 export type AttendanceRecord = Tables<"attendance">;
 export type PayrollMonth = Tables<"payroll_months">;

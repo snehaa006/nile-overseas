@@ -10,6 +10,7 @@ import {
   useAttendanceDay,
   useAttendanceMonth,
   useClearAttendanceForDay,
+  useDepartments,
   useEmployees,
   useMarkAllAttendance,
   useMarkAllSalariesPaid,
@@ -26,6 +27,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { DatePicker } from "@/shared/components/ui/date-picker";
 import { MonthPicker } from "@/shared/components/ui/month-picker";
+import { Select } from "@/shared/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -43,6 +45,7 @@ import {
   DEFAULT_WORKING_DAYS,
   type AttendanceRecord,
   type AttendanceStatus,
+  type Department,
   type Employee,
   type PayrollRow,
   type SalaryPayment,
@@ -134,13 +137,81 @@ function SearchField({
   );
 }
 
-function matches(employee: Employee, query: string): boolean {
+function matches(employee: Employee, query: string, department?: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
   return (
     employee.name.toLowerCase().includes(q) ||
     employee.employee_code.toLowerCase().includes(q) ||
-    employee.designation.toLowerCase().includes(q)
+    employee.designation.toLowerCase().includes(q) ||
+    (department ?? "").toLowerCase().includes(q)
+  );
+}
+
+/* ------------------------------ Departments ----------------------------- */
+
+/** "all" is every worker; "none" is the ones not assigned to a department. */
+type DepartmentFilterValue = string;
+
+function inDepartment(employee: Employee, filter: DepartmentFilterValue): boolean {
+  if (filter === "all") return true;
+  if (filter === "none") return !employee.department_id;
+  return employee.department_id === filter;
+}
+
+/**
+ * The departments as a lookup, so every view can name a worker's department
+ * without joining it onto the roster query.
+ */
+function useDepartmentNames() {
+  const { data: departments } = useDepartments();
+  const list = departments ?? [];
+  const byId = useMemo(
+    () => new Map(list.map((d) => [d.id, d.name])),
+    [list],
+  );
+  return {
+    departments: list,
+    nameOf: (employee: Employee) =>
+      (employee.department_id && byId.get(employee.department_id)) || "—",
+  };
+}
+
+function DepartmentFilter({
+  value,
+  onChange,
+  departments,
+}: {
+  value: DepartmentFilterValue;
+  onChange: (next: DepartmentFilterValue) => void;
+  departments: Department[];
+}) {
+  return (
+    <Select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-9 w-48"
+      aria-label="Filter by department"
+      title="Show only one department"
+    >
+      <option value="all">All departments</option>
+      {departments.map((department) => (
+        <option key={department.id} value={department.id}>
+          {department.name}
+        </option>
+      ))}
+      <option value="none">No department</option>
+    </Select>
+  );
+}
+
+/** A worker's department, quiet enough to sit in a dense table. */
+function DepartmentTag({ name }: { name: string }) {
+  if (name === "—") return <span className="text-muted-foreground">—</span>;
+  return (
+    <span className="inline-flex items-center rounded-full border bg-muted/50 px-2 py-0.5 text-xs font-medium text-foreground">
+      {name}
+    </span>
   );
 }
 
@@ -190,7 +261,9 @@ function NoMatch({ query, colSpan }: { query: string; colSpan: number }) {
   return (
     <TableRow>
       <TableCell colSpan={colSpan} className="py-8 text-center text-muted-foreground">
-        No worker matches “{query}”.
+        {query.trim()
+          ? `No worker matches “${query}”.`
+          : "No workers in this department."}
       </TableCell>
     </TableRow>
   );
@@ -325,16 +398,27 @@ function WorkersTab() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState<WorkerSortKey>("name");
+  const [department, setDepartment] = useState<DepartmentFilterValue>("all");
   const { rows, roster, workingDays, isLoading, isError, error, refetch } =
     usePayrollRows(month);
+  const { departments, nameOf } = useDepartmentNames();
 
-  const shown = sortWorkerRows(rows, sortBy).filter((row) => matches(row.employee, query));
+  const shown = sortWorkerRows(rows, sortBy)
+    .filter((row) => inDepartment(row.employee, department))
+    .filter((row) => matches(row.employee, query, nameOf(row.employee)));
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SearchField value={query} onChange={setQuery} />
-        <WorkerSortToggle value={sortBy} onChange={setSortBy} />
+        <div className="flex items-center gap-3">
+          <DepartmentFilter
+            value={department}
+            onChange={setDepartment}
+            departments={departments}
+          />
+          <WorkerSortToggle value={sortBy} onChange={setSortBy} />
+        </div>
       </div>
 
       {isLoading ? (
@@ -352,6 +436,7 @@ function WorkersTab() {
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead>Worker</TableHead>
+                <TableHead>Department</TableHead>
                 <TableHead>Designation</TableHead>
                 <TableHead className="text-right">Salary</TableHead>
                 <TableHead className="text-right">
@@ -372,6 +457,9 @@ function WorkersTab() {
                 >
                   <TableCell>
                     <EmployeeCell employee={row.employee} />
+                  </TableCell>
+                  <TableCell>
+                    <DepartmentTag name={nameOf(row.employee)} />
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {row.employee.designation}
@@ -399,7 +487,7 @@ function WorkersTab() {
                   </TableCell>
                 </TableRow>
               ))}
-              {shown.length === 0 && <NoMatch query={query} colSpan={7} />}
+              {shown.length === 0 && <NoMatch query={query} colSpan={8} />}
             </TableBody>
           </Table>
         </div>
@@ -415,7 +503,9 @@ function AttendanceTab() {
   const [date, setDate] = useState(dateKey());
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState<WorkerSortKey>("name");
+  const [department, setDepartment] = useState<DepartmentFilterValue>("all");
   const { data: employees, isLoading, isError, error, refetch } = useEmployees();
+  const { departments, nameOf } = useDepartmentNames();
   const { data: records } = useAttendanceDay(date);
   const markAll = useMarkAllAttendance(date);
 
@@ -425,8 +515,11 @@ function AttendanceTab() {
     return map;
   }, [records]);
 
-  const all = employees ?? [];
-  const shown = sortEmployees(all, sortBy).filter((e) => matches(e, query));
+  const roster = employees ?? [];
+  const all = roster.filter((e) => inDepartment(e, department));
+  const shown = sortEmployees(all, sortBy).filter((e) =>
+    matches(e, query, nameOf(e)),
+  );
   const statusOf = (id: string) => recordById.get(id)?.status;
   const present = all.filter((e) => statusOf(e.id) === "present").length;
   const absent = all.filter((e) => statusOf(e.id) === "absent").length;
@@ -443,9 +536,18 @@ function AttendanceTab() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <DatePicker value={date} onChange={setDate} />
+        <div className="flex flex-wrap items-center gap-3">
+          <DatePicker value={date} onChange={setDate} />
+          <DepartmentFilter
+            value={department}
+            onChange={setDepartment}
+            departments={departments}
+          />
+        </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Mark all</span>
+          <span className="text-sm text-muted-foreground">
+            Mark all{department !== "all" && " shown"}
+          </span>
           <Button
             size="sm"
             variant="outline"
@@ -473,7 +575,7 @@ function AttendanceTab() {
         <LoadingState />
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
-      ) : all.length === 0 ? (
+      ) : roster.length === 0 ? (
         <EmptyState title="No workers yet" description="Add a worker first." />
       ) : (
         <>
@@ -493,6 +595,7 @@ function AttendanceTab() {
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead>Worker</TableHead>
+                  <TableHead>Department</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead className="w-[1%] text-center">Hours</TableHead>
                   <TableHead className="w-[1%] text-center">OT hrs</TableHead>
@@ -505,10 +608,11 @@ function AttendanceTab() {
                     key={employee.id}
                     employee={employee}
                     date={date}
+                    department={nameOf(employee)}
                     record={recordById.get(employee.id)}
                   />
                 ))}
-                {shown.length === 0 && <NoMatch query={query} colSpan={5} />}
+                {shown.length === 0 && <NoMatch query={query} colSpan={6} />}
               </TableBody>
             </Table>
           </div>
@@ -521,10 +625,12 @@ function AttendanceTab() {
 function AttendanceRow({
   employee,
   date,
+  department,
   record,
 }: {
   employee: Employee;
   date: string;
+  department: string;
   record?: AttendanceRecord;
 }) {
   const status = record?.status;
@@ -558,6 +664,9 @@ function AttendanceRow({
     >
       <TableCell>
         <EmployeeCell employee={employee} />
+      </TableCell>
+      <TableCell>
+        <DepartmentTag name={department} />
       </TableCell>
       <TableCell className="text-muted-foreground">{employee.designation}</TableCell>
       <TableCell className="text-center">
@@ -602,10 +711,28 @@ function PayrollTab() {
   const [month, setMonth] = useState(dateKey().slice(0, 7));
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState<WorkerSortKey>("name");
+  const [department, setDepartment] = useState<DepartmentFilterValue>("all");
   const navigate = useNavigate();
   const { rows: unsorted, roster, workingDays, isLoading, isError, error, refetch } =
     usePayrollRows(month);
-  const rows = useMemo(() => sortWorkerRows(unsorted, sortBy), [unsorted, sortBy]);
+  const { departments, nameOf } = useDepartmentNames();
+
+  // The department is a scope, not a search: totals, the payout shortcut and
+  // the exported sheet all describe exactly the workers on screen.
+  const rows = useMemo(
+    () =>
+      sortWorkerRows(
+        unsorted.filter((row) => inDepartment(row.employee, department)),
+        sortBy,
+      ),
+    [unsorted, sortBy, department],
+  );
+  const departmentName =
+    department === "all"
+      ? null
+      : department === "none"
+        ? "No department"
+        : (departments.find((d) => d.id === department)?.name ?? null);
 
   const { data: payments } = useSalaryPayments(month);
   const markAllPaid = useMarkAllSalariesPaid(month);
@@ -616,7 +743,7 @@ function PayrollTab() {
     return map;
   }, [payments]);
 
-  const shown = rows.filter((row) => matches(row.employee, query));
+  const shown = rows.filter((row) => matches(row.employee, query, nameOf(row.employee)));
   const total = (pick: (row: PayrollRow) => number) =>
     rows.reduce((sum, row) => sum + pick(row), 0);
 
@@ -632,6 +759,8 @@ function PayrollTab() {
         month,
         workingDays,
         rows,
+        department: departmentName,
+        departmentOf: nameOf,
         paymentsByEmployee: paidById,
       });
     } catch (err) {
@@ -657,6 +786,11 @@ function PayrollTab() {
       <div className="flex flex-wrap items-center gap-3">
         <MonthPicker value={month} onChange={setMonth} />
         <WorkingDaysField month={month} workingDays={workingDays} />
+        <DepartmentFilter
+          value={department}
+          onChange={setDepartment}
+          departments={departments}
+        />
         <div className="ml-auto flex items-center gap-2">
           <Button
             variant="outline"
@@ -680,7 +814,9 @@ function PayrollTab() {
             size="sm"
             onClick={handleExport}
             disabled={roster.length === 0}
-            title={`Export ${formatMonth(`${month}-01`)} salaries as PDF`}
+            title={`Export ${formatMonth(`${month}-01`)} salaries${
+              departmentName ? ` for ${departmentName}` : ""
+            } as PDF`}
           >
             <FileDown className="h-4 w-4" /> Export PDF
           </Button>
@@ -718,6 +854,7 @@ function PayrollTab() {
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead>Worker</TableHead>
+                  <TableHead>Department</TableHead>
                   <TableHead className="text-right">Present</TableHead>
                   <TableHead className="text-right">Hours</TableHead>
                   <TableHead className="text-right">OT hrs</TableHead>
@@ -738,6 +875,9 @@ function PayrollTab() {
                   >
                     <TableCell>
                       <EmployeeCell employee={row.employee} />
+                    </TableCell>
+                    <TableCell>
+                      <DepartmentTag name={nameOf(row.employee)} />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {row.presentDays}
@@ -779,10 +919,10 @@ function PayrollTab() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {shown.length === 0 && <NoMatch query={query} colSpan={9} />}
+                {shown.length === 0 && <NoMatch query={query} colSpan={10} />}
 
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
-                  <TableCell colSpan={4} className="font-medium">
+                  <TableCell colSpan={5} className="font-medium">
                     Total
                   </TableCell>
                   <TableCell className="text-right font-medium tabular-nums">

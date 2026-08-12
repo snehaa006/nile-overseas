@@ -7,6 +7,7 @@ import {
   fetchAdvances,
   fetchAttendance,
   fetchAttendanceRange,
+  fetchDepartments,
   fetchEmployee,
   fetchEmployees,
   fetchPayrollMonth,
@@ -25,6 +26,15 @@ import {
 } from "@/shared/api/hr";
 import type { AttendanceStatus, Employee } from "@/shared/types/models";
 import type { TablesInsert, TablesUpdate } from "@/shared/types/database";
+
+/** The floor's departments — a tiny, rarely-changing lookup. */
+export function useDepartments() {
+  return useQuery({
+    queryKey: qk.departments,
+    queryFn: fetchDepartments,
+    staleTime: 5 * 60_000,
+  });
+}
 
 export function useEmployees() {
   return useQuery({ queryKey: qk.employees, queryFn: fetchEmployees });
