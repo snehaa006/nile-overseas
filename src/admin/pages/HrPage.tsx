@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  ArrowDownAZ, Check, ChevronRight, CircleSlash, FileDown, Hash, Plus, Search,
-  UserRound,
+  ArrowDownAZ, BadgeCheck, Check, ChevronRight, CircleSlash, FileDown, Hash,
+  Plus, Search, UserRound,
 } from "lucide-react";
 import {
   useAdvances,
@@ -334,6 +334,67 @@ function sortWorkerRows(rows: PayrollRow[], sortBy: WorkerSortKey): PayrollRow[]
   return [...rows].sort((a, b) => compare(a.employee, b.employee));
 }
 
+/**
+ * Payroll sorts by payment status as well: paid first when settling up and
+ * checking what has gone out, unpaid first when working through what is
+ * still owed. Within a group workers stay alphabetical.
+ */
+type PayrollSortKey = WorkerSortKey | "paid" | "unpaid";
+
+function sortPayrollRows(
+  rows: PayrollRow[],
+  sortBy: PayrollSortKey,
+  isPaid: (employeeId: string) => boolean,
+): PayrollRow[] {
+  if (sortBy !== "paid" && sortBy !== "unpaid") return sortWorkerRows(rows, sortBy);
+  const first = sortBy === "paid";
+  const rank = (row: PayrollRow) => (isPaid(row.employee.id) === first ? 0 : 1);
+  return [...rows].sort(
+    (a, b) => rank(a) - rank(b) || a.employee.name.localeCompare(b.employee.name),
+  );
+}
+
+function PayrollSortToggle({
+  value,
+  onChange,
+}: {
+  value: PayrollSortKey;
+  onChange: (next: PayrollSortKey) => void;
+}) {
+  const byStatus = value === "paid" || value === "unpaid";
+  return (
+    <div className="inline-flex overflow-hidden rounded-lg border">
+      <SortButton
+        label="ID"
+        icon={<Hash className="h-3.5 w-3.5" />}
+        title="Sort by worker ID"
+        active={value === "id"}
+        onClick={() => onChange("id")}
+      />
+      <SortButton
+        label="A–Z"
+        icon={<ArrowDownAZ className="h-3.5 w-3.5" />}
+        title="Sort alphabetically by name"
+        active={value === "name"}
+        onClick={() => onChange("name")}
+      />
+      <SortButton
+        label={value === "unpaid" ? "Unpaid" : "Paid"}
+        icon={<BadgeCheck className="h-3.5 w-3.5" />}
+        title={
+          value === "paid"
+            ? "Paid workers first — click again to put unpaid first"
+            : value === "unpaid"
+              ? "Unpaid workers first — click again to put paid first"
+              : "Group by payment status, paid first"
+        }
+        active={byStatus}
+        onClick={() => onChange(value === "paid" ? "unpaid" : "paid")}
+      />
+    </div>
+  );
+}
+
 function WorkerSortToggle({
   value,
   onChange,
@@ -381,7 +442,7 @@ function SortButton({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "flex h-9 items-center gap-1.5 px-3 text-sm font-medium transition-colors first:border-r",
+        "flex h-9 items-center gap-1.5 px-3 text-sm font-medium transition-colors [&:not(:last-child)]:border-r",
         active
           ? "bg-primary text-primary-foreground"
           : "bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
@@ -710,30 +771,12 @@ function AttendanceRow({
 function PayrollTab() {
   const [month, setMonth] = useState(dateKey().slice(0, 7));
   const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState<WorkerSortKey>("name");
+  const [sortBy, setSortBy] = useState<PayrollSortKey>("name");
   const [department, setDepartment] = useState<DepartmentFilterValue>("all");
   const navigate = useNavigate();
   const { rows: unsorted, roster, workingDays, isLoading, isError, error, refetch } =
     usePayrollRows(month);
   const { departments, nameOf } = useDepartmentNames();
-
-  // The department is a scope, not a search: totals, the payout shortcut and
-  // the exported sheet all describe exactly the workers on screen.
-  const rows = useMemo(
-    () =>
-      sortWorkerRows(
-        unsorted.filter((row) => inDepartment(row.employee, department)),
-        sortBy,
-      ),
-    [unsorted, sortBy, department],
-  );
-  const departmentName =
-    department === "all"
-      ? null
-      : department === "none"
-        ? "No department"
-        : (departments.find((d) => d.id === department)?.name ?? null);
-
   const { data: payments } = useSalaryPayments(month);
   const markAllPaid = useMarkAllSalariesPaid(month);
 
@@ -742,6 +785,24 @@ function PayrollTab() {
     for (const payment of payments ?? []) map.set(payment.employee_id, payment);
     return map;
   }, [payments]);
+
+  // The department is a scope, not a search: totals, the payout shortcut and
+  // the exported sheet all describe exactly the workers on screen.
+  const rows = useMemo(
+    () =>
+      sortPayrollRows(
+        unsorted.filter((row) => inDepartment(row.employee, department)),
+        sortBy,
+        (employeeId) => paidById.has(employeeId),
+      ),
+    [unsorted, sortBy, department, paidById],
+  );
+  const departmentName =
+    department === "all"
+      ? null
+      : department === "none"
+        ? "No department"
+        : (departments.find((d) => d.id === department)?.name ?? null);
 
   const shown = rows.filter((row) => matches(row.employee, query, nameOf(row.employee)));
   const total = (pick: (row: PayrollRow) => number) =>
@@ -846,7 +907,7 @@ function PayrollTab() {
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <SearchField value={query} onChange={setQuery} />
-            <WorkerSortToggle value={sortBy} onChange={setSortBy} />
+            <PayrollSortToggle value={sortBy} onChange={setSortBy} />
           </div>
 
           <div className="overflow-hidden rounded-xl border bg-card">
