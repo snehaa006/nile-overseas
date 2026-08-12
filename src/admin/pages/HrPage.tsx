@@ -245,12 +245,20 @@ function usePayrollRows(month: string) {
 type WorkerSortKey = "id" | "name";
 
 /** Employee codes are zero-padded (EMP-0001…), so plain string order is numeric order too. */
-function sortWorkerRows(rows: PayrollRow[], sortBy: WorkerSortKey): PayrollRow[] {
-  return [...rows].sort((a, b) =>
+function compareBy(sortBy: WorkerSortKey) {
+  return (a: Employee, b: Employee) =>
     sortBy === "id"
-      ? a.employee.employee_code.localeCompare(b.employee.employee_code)
-      : a.employee.name.localeCompare(b.employee.name),
-  );
+      ? a.employee_code.localeCompare(b.employee_code)
+      : a.name.localeCompare(b.name);
+}
+
+function sortEmployees(employees: Employee[], sortBy: WorkerSortKey): Employee[] {
+  return [...employees].sort(compareBy(sortBy));
+}
+
+function sortWorkerRows(rows: PayrollRow[], sortBy: WorkerSortKey): PayrollRow[] {
+  const compare = compareBy(sortBy);
+  return [...rows].sort((a, b) => compare(a.employee, b.employee));
 }
 
 function WorkerSortToggle({
@@ -406,6 +414,7 @@ function WorkersTab() {
 function AttendanceTab() {
   const [date, setDate] = useState(dateKey());
   const [query, setQuery] = useState("");
+  const [sortBy, setSortBy] = useState<WorkerSortKey>("name");
   const { data: employees, isLoading, isError, error, refetch } = useEmployees();
   const { data: records } = useAttendanceDay(date);
   const markAll = useMarkAllAttendance(date);
@@ -417,7 +426,7 @@ function AttendanceTab() {
   }, [records]);
 
   const all = employees ?? [];
-  const shown = all.filter((e) => matches(e, query));
+  const shown = sortEmployees(all, sortBy).filter((e) => matches(e, query));
   const statusOf = (id: string) => recordById.get(id)?.status;
   const present = all.filter((e) => statusOf(e.id) === "present").length;
   const absent = all.filter((e) => statusOf(e.id) === "absent").length;
@@ -474,7 +483,10 @@ function AttendanceTab() {
             <Tile label="Not marked" value={unmarked} />
           </div>
 
-          <SearchField value={query} onChange={setQuery} />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <SearchField value={query} onChange={setQuery} />
+            <WorkerSortToggle value={sortBy} onChange={setSortBy} />
+          </div>
 
           <div className="overflow-hidden rounded-xl border bg-card">
             <Table>
@@ -589,9 +601,11 @@ function AttendanceRow({
 function PayrollTab() {
   const [month, setMonth] = useState(dateKey().slice(0, 7));
   const [query, setQuery] = useState("");
+  const [sortBy, setSortBy] = useState<WorkerSortKey>("name");
   const navigate = useNavigate();
-  const { rows, roster, workingDays, isLoading, isError, error, refetch } =
+  const { rows: unsorted, roster, workingDays, isLoading, isError, error, refetch } =
     usePayrollRows(month);
+  const rows = useMemo(() => sortWorkerRows(unsorted, sortBy), [unsorted, sortBy]);
 
   const { data: payments } = useSalaryPayments(month);
   const markAllPaid = useMarkAllSalariesPaid(month);
@@ -694,7 +708,10 @@ function PayrollTab() {
             />
           </div>
 
-          <SearchField value={query} onChange={setQuery} />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <SearchField value={query} onChange={setQuery} />
+            <WorkerSortToggle value={sortBy} onChange={setSortBy} />
+          </div>
 
           <div className="overflow-hidden rounded-xl border bg-card">
             <Table>

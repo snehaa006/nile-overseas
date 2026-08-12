@@ -8,6 +8,7 @@ import {
   useClearAttendanceForMonth,
   useEmployee,
   useMarkAttendanceForMonth,
+  useMarkMonthForEmployee,
   usePayrollMonth,
   useSaveAdvance,
   useSavePayrollMonth,
@@ -21,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
-import { LoadingState, ErrorState } from "@/shared/components/StateViews";
+import { LoadingState, ErrorState, Spinner } from "@/shared/components/StateViews";
 import { AttendanceToggle } from "../components/AttendanceToggle";
 import { InlineNumberInput } from "../components/InlineNumberInput";
 import { dateKey, formatCurrency, formatCurrencyExact } from "@/shared/utils/format";
@@ -124,6 +125,7 @@ export function WorkerDetailPage() {
       <div className="flex flex-wrap items-center gap-3">
         <MonthPicker value={month} onChange={setMonth} />
         <WorkingDaysField month={month} workingDays={workingDays} />
+        <MarkMonthButtons month={month} employee={employee} days={days} />
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -279,6 +281,80 @@ function Tile({
       >
         {value}
       </p>
+    </div>
+  );
+}
+
+/**
+ * Fills this worker's month in one go — the same P / A shortcut the
+ * Attendance tab has for a day, turned sideways.
+ *
+ * Two deliberate limits: nothing in the future is marked (a month in
+ * progress fills up to today only), and Sundays are left alone, since the
+ * month has ~26 working days and blanket-marking the rest would quietly pay
+ * for days nobody worked. Either can still be marked by hand below.
+ */
+function MarkMonthButtons({
+  month,
+  employee,
+  days,
+}: {
+  month: string;
+  employee: Employee;
+  days: string[];
+}) {
+  const markMonth = useMarkMonthForEmployee(month);
+  const today = dateKey();
+  const workdays = days.filter(
+    (date) => date <= today && new Date(`${date}T00:00:00`).getDay() !== 0,
+  );
+
+  const markAll = async (status: AttendanceStatus) => {
+    try {
+      await markMonth.mutateAsync({
+        employeeId: employee.id,
+        dates: workdays,
+        status,
+        shiftHours: Number(employee.shift_hours),
+      });
+      toast.success(
+        `Marked ${workdays.length} ${workdays.length === 1 ? "day" : "days"} ${
+          status === "present" ? "present" : "absent"
+        } — Sundays left unmarked`,
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to mark attendance");
+    }
+  };
+
+  const hint = (label: string) =>
+    workdays.length === 0
+      ? "Nothing to mark in this month yet"
+      : `Mark all ${workdays.length} days so far ${label} (Sundays skipped, existing marks overwritten)`;
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-muted-foreground">Mark all</span>
+      <Button
+        size="sm"
+        variant="outline"
+        className="w-10 font-semibold text-emerald-700 hover:bg-emerald-50"
+        title={hint("present")}
+        onClick={() => markAll("present")}
+        disabled={markMonth.isPending || workdays.length === 0}
+      >
+        {markMonth.isPending ? <Spinner className="h-4 w-4" /> : "P"}
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        className="w-10 font-semibold text-rose-700 hover:bg-rose-50"
+        title={hint("absent")}
+        onClick={() => markAll("absent")}
+        disabled={markMonth.isPending || workdays.length === 0}
+      >
+        {markMonth.isPending ? <Spinner className="h-4 w-4" /> : "A"}
+      </Button>
     </div>
   );
 }
