@@ -5,6 +5,7 @@ import type {
   Employee,
   PayrollMonth,
   SalaryAdvance,
+  SalaryPayment,
 } from "@/shared/types/models";
 import type { TablesInsert, TablesUpdate } from "@/shared/types/database";
 
@@ -217,6 +218,77 @@ export async function saveAdvance(args: {
     .single();
   if (error) throw error;
   return data;
+}
+
+/* ------------------------------- Payouts -------------------------------- */
+
+/** Salaries already handed over for a month — a row per worker paid. */
+export async function fetchSalaryPayments(month: string): Promise<SalaryPayment[]> {
+  const { data, error } = await supabase
+    .from("salary_payments")
+    .select("*")
+    .eq("month", month);
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Records a worker's salary for a month as paid. The net payable is snapshot
+ * on the row, so a later attendance edit doesn't rewrite history.
+ */
+export async function markSalaryPaid(args: {
+  employeeId: string;
+  month: string;
+  amount: number;
+  paidOn?: string;
+}): Promise<SalaryPayment> {
+  const { data, error } = await supabase
+    .from("salary_payments")
+    .upsert(
+      {
+        employee_id: args.employeeId,
+        month: args.month,
+        amount: args.amount,
+        ...(args.paidOn ? { paid_on: args.paidOn } : {}),
+      },
+      { onConflict: "employee_id,month" },
+    )
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** Undoes a payout mark — the salary goes back to outstanding. */
+export async function unmarkSalaryPaid(args: {
+  employeeId: string;
+  month: string;
+}): Promise<void> {
+  const { error } = await supabase
+    .from("salary_payments")
+    .delete()
+    .eq("employee_id", args.employeeId)
+    .eq("month", args.month);
+  if (error) throw error;
+}
+
+/** Marks a batch of workers paid at once — the "everyone paid" shortcut. */
+export async function markSalariesPaid(args: {
+  month: string;
+  payouts: { employeeId: string; amount: number }[];
+  paidOn?: string;
+}): Promise<void> {
+  if (args.payouts.length === 0) return;
+  const { error } = await supabase.from("salary_payments").upsert(
+    args.payouts.map((payout) => ({
+      employee_id: payout.employeeId,
+      month: args.month,
+      amount: payout.amount,
+      ...(args.paidOn ? { paid_on: args.paidOn } : {}),
+    })),
+    { onConflict: "employee_id,month" },
+  );
+  if (error) throw error;
 }
 
 /** Clears a mark, putting the worker back to "not marked" for that day. */

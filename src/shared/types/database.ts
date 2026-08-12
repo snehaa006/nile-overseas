@@ -378,6 +378,26 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["salary_advances"]["Insert"]>;
         Relationships: [];
       };
+      salary_payments: {
+        Row: {
+          amount: number;
+          created_at: string;
+          employee_id: string;
+          id: string;
+          month: string;
+          paid_on: string;
+        };
+        Insert: {
+          amount?: number;
+          created_at?: string;
+          employee_id: string;
+          id?: string;
+          month: string;
+          paid_on?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["salary_payments"]["Insert"]>;
+        Relationships: [];
+      };
       payroll_months: {
         Row: {
           created_at: string;
