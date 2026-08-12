@@ -8,12 +8,14 @@ import { ArrowLeft, Trash2 } from "lucide-react";
 import {
   useCreateEmployee,
   useDeleteEmployee,
+  useDepartments,
   useEmployee,
   useUpdateEmployee,
 } from "@/shared/hooks/useHr";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { Select } from "@/shared/components/ui/select";
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from "@/shared/components/ui/card";
@@ -21,6 +23,8 @@ import { LoadingState, Spinner } from "@/shared/components/StateViews";
 
 const schema = z.object({
   name: z.string().min(2, "Name is required"),
+  // "" is a worker not assigned to any department yet — stored as null.
+  department_id: z.string().optional(),
   designation: z.string().min(2, "Designation is required"),
   salary: z.coerce.number().nonnegative("Salary can't be negative"),
   shift_hours: z.coerce
@@ -37,6 +41,7 @@ export function WorkerEditorPage() {
   const navigate = useNavigate();
 
   const { data: existing, isLoading } = useEmployee(id);
+  const { data: departments } = useDepartments();
   const createEmployee = useCreateEmployee();
   const updateEmployee = useUpdateEmployee();
   const removeEmployee = useDeleteEmployee();
@@ -46,13 +51,20 @@ export function WorkerEditorPage() {
     register, handleSubmit, reset, formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", designation: "", salary: 0, shift_hours: 12 },
+    defaultValues: {
+      name: "",
+      department_id: "",
+      designation: "",
+      salary: 0,
+      shift_hours: 12,
+    },
   });
 
   useEffect(() => {
     if (existing) {
       reset({
         name: existing.name,
+        department_id: existing.department_id ?? "",
         designation: existing.designation,
         salary: existing.salary,
         shift_hours: existing.shift_hours,
@@ -61,13 +73,14 @@ export function WorkerEditorPage() {
   }, [existing, reset]);
 
   const onSubmit = async (values: FormValues) => {
+    const input = { ...values, department_id: values.department_id || null };
     try {
       if (isEdit && id) {
-        await updateEmployee.mutateAsync({ id, input: values });
+        await updateEmployee.mutateAsync({ id, input });
         toast.success("Worker updated");
         navigate(`/admin/hr/${id}`);
       } else {
-        const created = await createEmployee.mutateAsync(values);
+        const created = await createEmployee.mutateAsync(input);
         toast.success(`Worker added — ${created.employee_code}`);
         navigate(`/admin/hr/${created.id}`);
       }
@@ -109,6 +122,18 @@ export function WorkerEditorPage() {
                 {errors.name && (
                   <p className="text-xs text-destructive">{errors.name.message}</p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="department_id">Department</Label>
+                <Select id="department_id" {...register("department_id")}>
+                  <option value="">No department</option>
+                  {(departments ?? []).map((department) => (
+                    <option key={department.id} value={department.id}>
+                      {department.name}
+                    </option>
+                  ))}
+                </Select>
               </div>
 
               <div className="space-y-2">

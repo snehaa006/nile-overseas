@@ -80,9 +80,14 @@ export function exportPayrollPdf(args: {
   workingDays: number;
   rows: PayrollRow[];
   paymentsByEmployee: Map<string, SalaryPayment>;
+  /** Names the department when the sheet covers only one, null for all. */
+  department?: string | null;
+  departmentOf?: (employee: PayrollRow["employee"]) => string;
 }): void {
   const { month, workingDays, rows, paymentsByEmployee } = args;
+  const departmentOf = args.departmentOf ?? (() => "—");
   const monthLabel = formatMonth(`${month}-01`);
+  const scope = args.department ? ` · ${args.department}` : "";
   const total = (pick: (row: PayrollRow) => number) =>
     rows.reduce((sum, row) => sum + pick(row), 0);
 
@@ -99,6 +104,7 @@ export function exportPayrollPdf(args: {
           <td class="num muted">${index + 1}</td>
           <td class="code">${escapeHtml(row.employee.employee_code)}</td>
           <td>${escapeHtml(row.employee.name)}</td>
+          <td>${escapeHtml(departmentOf(row.employee))}</td>
           <td class="muted">${escapeHtml(row.employee.designation)}</td>
           <td class="num">${escapeHtml(formatCurrency(row.employee.salary))}</td>
           <td class="num">${row.presentDays}<span class="muted">/${workingDays}</span></td>
@@ -124,7 +130,7 @@ export function exportPayrollPdf(args: {
   <div class="sheet-head">
     <div>
       <p class="company">Nile Overseas</p>
-      <p class="subtitle">Salary sheet — ${escapeHtml(monthLabel)}</p>
+      <p class="subtitle">Salary sheet — ${escapeHtml(monthLabel)}${escapeHtml(scope)}</p>
     </div>
     <div class="generated">
       Generated ${escapeHtml(formatDate(dateKey()))}<br />
@@ -148,6 +154,7 @@ export function exportPayrollPdf(args: {
         <th>#</th>
         <th>ID</th>
         <th>Worker</th>
+        <th>Department</th>
         <th>Designation</th>
         <th class="num">Salary</th>
         <th class="num">Present</th>
@@ -162,11 +169,11 @@ export function exportPayrollPdf(args: {
       </tr>
     </thead>
     <tbody>
-      ${body || `<tr><td colspan="14" class="muted" style="text-align:center;padding:16px">No workers on the roster.</td></tr>`}
+      ${body || `<tr><td colspan="15" class="muted" style="text-align:center;padding:16px">No workers on the roster.</td></tr>`}
     </tbody>
     <tfoot>
       <tr>
-        <td colspan="6">Total</td>
+        <td colspan="7">Total</td>
         <td class="num">${escapeHtml(fmtHours(total((r) => r.hoursWorked)))}</td>
         <td class="num">${escapeHtml(fmtHours(total((r) => r.overtimeHours)))}</td>
         <td class="num">${escapeHtml(formatCurrencyExact(total((r) => r.totalPay)))}</td>
@@ -185,7 +192,7 @@ export function exportPayrollPdf(args: {
 `;
 
   printDocument({
-    title: `Payroll ${monthLabel}`,
+    title: `Payroll ${monthLabel}${scope}`,
     styles: STYLES,
     body: html,
   });

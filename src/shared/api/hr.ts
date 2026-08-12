@@ -2,12 +2,23 @@ import { supabase } from "@/shared/lib/supabase";
 import type {
   AttendanceRecord,
   AttendanceStatus,
+  Department,
   Employee,
   PayrollMonth,
   SalaryAdvance,
   SalaryPayment,
 } from "@/shared/types/models";
 import type { TablesInsert, TablesUpdate } from "@/shared/types/database";
+
+/** The departments on the floor, alphabetical. */
+export async function fetchDepartments(): Promise<Department[]> {
+  const { data, error } = await supabase
+    .from("departments")
+    .select("*")
+    .order("name");
+  if (error) throw error;
+  return data;
+}
 
 /** Every worker on the roster, active ones first, then alphabetical. */
 export async function fetchEmployees(): Promise<Employee[]> {

@@ -87,6 +87,7 @@ RLS is enabled on every table. The model:
 | blankets         | read where `is_active = true`    | full |
 | blanket_images   | read (only for active blankets)  | full |
 | daily_stock      | none                             | full |
+| departments      | none                             | HR admins only |
 | employees        | none                             | HR admins only |
 | payroll_months   | none                             | HR admins only |
 | salary_advances  | none                             | HR admins only |
@@ -97,6 +98,10 @@ RLS is enabled on every table. The model:
 
 Server-side invariants (not trusted to the client):
 - **SKU** auto-generated per brand via trigger (`DRJ-001`, race-safe row lock).
+- **Departments** are a lookup table (`Raschal`, `Finishing` to start), referenced
+  by `employees.department_id`, so the roster can be filtered and totalled per
+  department without spelling variants splitting one group into three. Removing
+  a department leaves its workers unassigned rather than deleting them.
 - **Employee ID** auto-issued from a sequence (`EMP-0001`), never client-supplied;
   attendance is unique per worker per day, so a re-mark overwrites rather than duplicates.
 - **Payroll** derives from attendance: `day rate = salary / working days in month`,
