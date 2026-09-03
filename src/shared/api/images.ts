@@ -1,15 +1,17 @@
-import { supabase, STORAGE_BUCKET } from "@/shared/lib/supabase";
+import { fetchAll, supabase, STORAGE_BUCKET } from "@/shared/lib/supabase";
 import type { BlanketImage } from "@/shared/types/models";
 
 export async function fetchImages(blanketId: string): Promise<BlanketImage[]> {
-  const { data, error } = await supabase
-    .from("blanket_images")
-    .select("*")
-    .eq("blanket_id", blanketId)
-    .order("is_primary", { ascending: false })
-    .order("display_order");
-  if (error) throw error;
-  return data;
+  return fetchAll((from, to) =>
+    supabase
+      .from("blanket_images")
+      .select("*")
+      .eq("blanket_id", blanketId)
+      .order("is_primary", { ascending: false })
+      .order("display_order")
+      .order("id")
+      .range(from, to),
+  );
 }
 
 /**

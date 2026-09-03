@@ -1,4 +1,4 @@
-import { supabase } from "@/shared/lib/supabase";
+import { fetchAll, supabase } from "@/shared/lib/supabase";
 
 const PROCESS_PHOTOS_BUCKET = "process-photos";
 
@@ -19,10 +19,11 @@ export type ProcessPhotoStep = (typeof PROCESS_PHOTO_STEPS)[number]["key"];
 
 /** step → public image URL, only for steps that have a photo set. */
 export async function fetchProcessPhotos(): Promise<Record<string, string>> {
-  const { data, error } = await supabase.from("process_photos").select("step, image_url");
-  if (error) throw error;
+  const data = await fetchAll((from, to) =>
+    supabase.from("process_photos").select("step, image_url").order("step").range(from, to),
+  );
   const map: Record<string, string> = {};
-  for (const row of data ?? []) {
+  for (const row of data) {
     if (row.image_url) map[row.step] = row.image_url;
   }
   return map;

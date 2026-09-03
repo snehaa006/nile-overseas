@@ -1,13 +1,10 @@
-import { supabase, LOGO_BUCKET } from "@/shared/lib/supabase";
+import { fetchAll, supabase, LOGO_BUCKET } from "@/shared/lib/supabase";
 import type { Brand } from "@/shared/types/models";
 
 export async function fetchBrands(): Promise<Brand[]> {
-  const { data, error } = await supabase
-    .from("products")
-    .select("*")
-    .order("name");
-  if (error) throw error;
-  return data;
+  return fetchAll((from, to) =>
+    supabase.from("products").select("*").order("name").order("id").range(from, to),
+  );
 }
 
 /** Upload (or replace) a brand's logo and store its public URL on the brand. */

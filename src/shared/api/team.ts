@@ -1,4 +1,4 @@
-import { supabase } from "@/shared/lib/supabase";
+import { fetchAll, supabase } from "@/shared/lib/supabase";
 import type { TeamMember } from "@/shared/types/models";
 import type { TablesInsert, TablesUpdate } from "@/shared/types/database";
 
@@ -6,13 +6,15 @@ const TEAM_PHOTOS_BUCKET = "team-photos";
 
 /** All team members, ordered for the public "Ownership and management" section. */
 export async function fetchTeamMembers(): Promise<TeamMember[]> {
-  const { data, error } = await supabase
-    .from("team_members")
-    .select("*")
-    .order("display_order")
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  return data;
+  return fetchAll((from, to) =>
+    supabase
+      .from("team_members")
+      .select("*")
+      .order("display_order")
+      .order("created_at", { ascending: true })
+      .order("id")
+      .range(from, to),
+  );
 }
 
 export async function createTeamMember(

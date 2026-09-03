@@ -1,4 +1,4 @@
-import { supabase } from "@/shared/lib/supabase";
+import { fetchAll, supabase } from "@/shared/lib/supabase";
 import type { Client } from "@/shared/types/models";
 import type { TablesInsert, TablesUpdate } from "@/shared/types/database";
 
@@ -6,13 +6,15 @@ const CLIENT_PHOTOS_BUCKET = "client-photos";
 
 /** All clients, ordered for the public timeline (manual order, then newest). */
 export async function fetchClients(): Promise<Client[]> {
-  const { data, error } = await supabase
-    .from("clients")
-    .select("*")
-    .order("display_order")
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  return data;
+  return fetchAll((from, to) =>
+    supabase
+      .from("clients")
+      .select("*")
+      .order("display_order")
+      .order("created_at", { ascending: true })
+      .order("id")
+      .range(from, to),
+  );
 }
 
 export async function createClient(

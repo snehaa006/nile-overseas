@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run check:reads && tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:reads": "node scripts/check-paged-reads.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
