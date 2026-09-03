@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  ArrowDownAZ, BadgeCheck, Check, ChevronRight, CircleSlash, FileDown, Hash,
-  Plus, Search, UserRound,
+  AlertTriangle, ArrowDownAZ, BadgeCheck, Check, ChevronRight, CircleSlash,
+  FileDown, Hash, Plus, Search, UserRound,
 } from "lucide-react";
 import {
   useAdvances,
@@ -42,6 +42,8 @@ import {
 import { cn } from "@/shared/utils/cn";
 import {
   calcPayroll,
+  payrollDrift,
+  payrollSnapshot,
   DEFAULT_WORKING_DAYS,
   type AttendanceRecord,
   type AttendanceStatus,
@@ -832,7 +834,11 @@ function PayrollTab() {
   const handleMarkAllPaid = async () => {
     try {
       await markAllPaid.mutateAsync(
-        unpaid.map((row) => ({ employeeId: row.employee.id, amount: row.netPay })),
+        unpaid.map((row) => ({
+          employeeId: row.employee.id,
+          amount: row.netPay,
+          snapshot: payrollSnapshot(row),
+        })),
       );
       toast.success(
         `Marked ${unpaid.length} ${unpaid.length === 1 ? "salary" : "salaries"} paid`,
@@ -973,8 +979,7 @@ function PayrollTab() {
                     >
                       <PaidToggle
                         month={month}
-                        employeeId={row.employee.id}
-                        netPay={row.netPay}
+                        row={row}
                         payment={paidById.get(row.employee.id)}
                       />
                     </TableCell>
@@ -1018,27 +1023,36 @@ function PayrollTab() {
  */
 function PaidToggle({
   month,
-  employeeId,
-  netPay,
+  row,
   payment,
 }: {
   month: string;
-  employeeId: string;
-  netPay: number;
+  row: PayrollRow;
   payment?: SalaryPayment;
 }) {
   const setPaid = useSetSalaryPaid(month);
   const paid = Boolean(payment);
 
+  // What has moved under this payment since it was recorded. The amount stays
+  // as paid — this only says so out loud, instead of leaving the difference to
+  // be noticed months later and reverse-engineered from the total.
+  const drift = payment ? payrollDrift(row, payment) : [];
+
   const toggle = async () => {
     try {
-      await setPaid.mutateAsync({ employeeId, amount: netPay, paid: !paid });
+      await setPaid.mutateAsync({
+        employeeId: row.employee.id,
+        amount: row.netPay,
+        snapshot: payrollSnapshot(row),
+        paid: !paid,
+      });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update payment");
     }
   };
 
   return (
+    <span className="inline-flex items-center gap-1">
     <button
       type="button"
       onClick={toggle}
@@ -1063,7 +1077,26 @@ function PaidToggle({
       ) : null}
       {paid ? formatDate(payment!.paid_on).replace(/ \d{4}$/, "") : "Mark paid"}
     </button>
+      {drift.length > 0 && (
+        <span
+          aria-label="Edited since this salary was paid"
+          title={`Edited since paid on ${formatDate(payment!.paid_on)}:\n${drift
+            .map(
+              (d) =>
+                `${d.label}: ${formatDriftValue(d.label, d.paid)} → ${formatDriftValue(d.label, d.now)}`,
+            )
+            .join("\n")}\n\nPaid ${formatCurrencyExact(payment!.amount)}; this month now computes to ${formatCurrencyExact(row.netPay)}.`}
+        >
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+        </span>
+      )}
+    </span>
   );
+}
+
+/** Advances and salary read as money; hours and days as plain counts. */
+function formatDriftValue(label: string, value: number): string {
+  return /advance|salary/i.test(label) ? formatCurrencyExact(value) : String(value);
 }
 
 /** Working days drive the day rate, so they're set per month, not guessed. */

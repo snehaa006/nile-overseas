@@ -25,6 +25,7 @@ export type AttendanceStatus = AttendanceRecord["status"];
 /** What one worker earned in a month, derived from attendance. */
 export type PayrollRow = {
   employee: Employee;
+  workingDays: number;
   presentDays: number;
   absentDays: number;
   hoursWorked: number;
@@ -74,6 +75,7 @@ export function calcPayroll(args: {
 
   return {
     employee,
+    workingDays,
     presentDays,
     absentDays,
     hoursWorked,
@@ -90,6 +92,60 @@ export function calcPayroll(args: {
     netPay: totalPay - advance,
   };
 }
+/**
+ * The figures a net payable was computed from. Stored on the payment row
+ * beside the amount so a paid month can be reconciled later: the amount alone
+ * says what was handed over, but not which input moved if payroll disagrees
+ * with it afterwards.
+ */
+export type PayrollSnapshot = {
+  hoursWorked: number;
+  overtimeHours: number;
+  cashAdvance: number;
+  bankAdvance: number;
+  salary: number;
+  shiftHours: number;
+  workingDays: number;
+};
+
+/** The inputs behind a row's pay, ready to store against a payment. */
+export function payrollSnapshot(row: PayrollRow): PayrollSnapshot {
+  return {
+    hoursWorked: row.hoursWorked,
+    overtimeHours: row.overtimeHours,
+    cashAdvance: row.cashAdvance,
+    bankAdvance: row.bankAdvance,
+    salary: Number(row.employee.salary),
+    shiftHours: Number(row.employee.shift_hours),
+    workingDays: row.workingDays,
+  };
+}
+
+/** One input that has changed since a worker was paid. */
+export type PayrollDrift = { label: string; paid: number; now: number };
+
+/**
+ * What changed under a payment since it was recorded. Empty when the month
+ * still computes to what was paid — and also for rows paid before the inputs
+ * were captured (migration 0021), where the honest answer is "unknown" rather
+ * than a comparison against nulls.
+ */
+export function payrollDrift(row: PayrollRow, payment: SalaryPayment): PayrollDrift[] {
+  if (payment.hours_worked === null) return [];
+  const compare: [string, number | null, number][] = [
+    ["Hours", payment.hours_worked, row.hoursWorked],
+    ["Overtime", payment.overtime_hours, row.overtimeHours],
+    ["Cash advance", payment.cash_advance, row.cashAdvance],
+    ["Bank advance", payment.bank_advance, row.bankAdvance],
+    ["Salary", payment.salary, Number(row.employee.salary)],
+    ["Shift hours", payment.shift_hours, Number(row.employee.shift_hours)],
+    ["Working days", payment.working_days, row.workingDays],
+  ];
+  return compare
+    .filter(([, paid, now]) => paid !== null && Math.abs(Number(paid) - now) > 0.001)
+    .map(([label, paid, now]) => ({ label, paid: Number(paid), now }));
+}
+
 export type ProductionEntry = Tables<"production_entries">;
 export type SiteSettings = Tables<"site_settings">;
 

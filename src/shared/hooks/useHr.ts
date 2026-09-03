@@ -24,7 +24,11 @@ import {
   unmarkSalaryPaid,
   updateEmployee,
 } from "@/shared/api/hr";
-import type { AttendanceStatus, Employee } from "@/shared/types/models";
+import type {
+  AttendanceStatus,
+  Employee,
+  PayrollSnapshot,
+} from "@/shared/types/models";
 import type { TablesInsert, TablesUpdate } from "@/shared/types/database";
 
 /** The floor's departments — a tiny, rarely-changing lookup. */
@@ -275,12 +279,18 @@ export function useSalaryPayments(month: string) {
 export function useSetSalaryPaid(month: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { employeeId: string; amount: number; paid: boolean }) =>
+    mutationFn: (args: {
+      employeeId: string;
+      amount: number;
+      snapshot: PayrollSnapshot;
+      paid: boolean;
+    }) =>
       args.paid
         ? markSalaryPaid({
             employeeId: args.employeeId,
             month: `${month}-01`,
             amount: args.amount,
+            snapshot: args.snapshot,
           }).then(() => {})
         : unmarkSalaryPaid({ employeeId: args.employeeId, month: `${month}-01` }),
     onSuccess: () =>
@@ -292,8 +302,9 @@ export function useSetSalaryPaid(month: string) {
 export function useMarkAllSalariesPaid(month: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payouts: { employeeId: string; amount: number }[]) =>
-      markSalariesPaid({ month: `${month}-01`, payouts }),
+    mutationFn: (
+      payouts: { employeeId: string; amount: number; snapshot: PayrollSnapshot }[],
+    ) => markSalariesPaid({ month: `${month}-01`, payouts }),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: qk.salaryPayments(month) }),
   });

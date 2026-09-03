@@ -5,6 +5,7 @@ import type {
   Department,
   Employee,
   PayrollMonth,
+  PayrollSnapshot,
   SalaryAdvance,
   SalaryPayment,
 } from "@/shared/types/models";
@@ -278,14 +279,29 @@ export async function fetchSalaryPayments(month: string): Promise<SalaryPayment[
   );
 }
 
+function snapshotColumns(snapshot: PayrollSnapshot) {
+  return {
+    hours_worked: snapshot.hoursWorked,
+    overtime_hours: snapshot.overtimeHours,
+    cash_advance: snapshot.cashAdvance,
+    bank_advance: snapshot.bankAdvance,
+    salary: snapshot.salary,
+    shift_hours: snapshot.shiftHours,
+    working_days: snapshot.workingDays,
+  };
+}
+
 /**
  * Records a worker's salary for a month as paid. The net payable is snapshot
- * on the row, so a later attendance edit doesn't rewrite history.
+ * on the row, together with the figures it was computed from, so a later
+ * attendance edit neither rewrites history nor leaves the difference
+ * unexplainable.
  */
 export async function markSalaryPaid(args: {
   employeeId: string;
   month: string;
   amount: number;
+  snapshot: PayrollSnapshot;
   paidOn?: string;
 }): Promise<SalaryPayment> {
   const { data, error } = await supabase
@@ -295,6 +311,7 @@ export async function markSalaryPaid(args: {
         employee_id: args.employeeId,
         month: args.month,
         amount: args.amount,
+        ...snapshotColumns(args.snapshot),
         ...(args.paidOn ? { paid_on: args.paidOn } : {}),
       },
       { onConflict: "employee_id,month" },
@@ -321,7 +338,7 @@ export async function unmarkSalaryPaid(args: {
 /** Marks a batch of workers paid at once — the "everyone paid" shortcut. */
 export async function markSalariesPaid(args: {
   month: string;
-  payouts: { employeeId: string; amount: number }[];
+  payouts: { employeeId: string; amount: number; snapshot: PayrollSnapshot }[];
   paidOn?: string;
 }): Promise<void> {
   if (args.payouts.length === 0) return;
@@ -330,6 +347,7 @@ export async function markSalariesPaid(args: {
       employee_id: payout.employeeId,
       month: args.month,
       amount: payout.amount,
+      ...snapshotColumns(payout.snapshot),
       ...(args.paidOn ? { paid_on: args.paidOn } : {}),
     })),
     { onConflict: "employee_id,month" },

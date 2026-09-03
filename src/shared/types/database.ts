@@ -337,6 +337,7 @@ export type Database = {
           name: string;
           salary: number;
           shift_hours: number;
+          updated_at: string | null;
         };
         Insert: {
           created_at?: string;
@@ -348,6 +349,7 @@ export type Database = {
           name: string;
           salary?: number;
           shift_hours?: number;
+          updated_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["employees"]["Insert"]>;
         Relationships: [];
@@ -360,6 +362,7 @@ export type Database = {
           id: string;
           overtime_hours: number;
           status: "present" | "absent";
+          updated_at: string | null;
           work_date: string;
         };
         Insert: {
@@ -369,6 +372,7 @@ export type Database = {
           id?: string;
           overtime_hours?: number;
           status: "present" | "absent";
+          updated_at?: string | null;
           work_date: string;
         };
         Update: Partial<Database["public"]["Tables"]["attendance"]["Insert"]>;
@@ -382,6 +386,7 @@ export type Database = {
           employee_id: string;
           id: string;
           month: string;
+          updated_at: string | null;
         };
         Insert: {
           bank_advance?: number;
@@ -390,6 +395,7 @@ export type Database = {
           employee_id: string;
           id?: string;
           month: string;
+          updated_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["salary_advances"]["Insert"]>;
         Relationships: [];
@@ -397,19 +403,36 @@ export type Database = {
       salary_payments: {
         Row: {
           amount: number;
+          /** Inputs the amount was computed from, null on rows paid before migration 0021. */
+          bank_advance: number | null;
+          cash_advance: number | null;
           created_at: string;
           employee_id: string;
+          hours_worked: number | null;
           id: string;
           month: string;
+          overtime_hours: number | null;
           paid_on: string;
+          salary: number | null;
+          shift_hours: number | null;
+          updated_at: string | null;
+          working_days: number | null;
         };
         Insert: {
           amount?: number;
+          bank_advance?: number | null;
+          cash_advance?: number | null;
           created_at?: string;
           employee_id: string;
+          hours_worked?: number | null;
           id?: string;
           month: string;
+          overtime_hours?: number | null;
           paid_on?: string;
+          salary?: number | null;
+          shift_hours?: number | null;
+          updated_at?: string | null;
+          working_days?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["salary_payments"]["Insert"]>;
         Relationships: [];
@@ -418,11 +441,13 @@ export type Database = {
         Row: {
           created_at: string;
           month: string;
+          updated_at: string | null;
           working_days: number;
         };
         Insert: {
           created_at?: string;
           month: string;
+          updated_at?: string | null;
           working_days: number;
         };
         Update: Partial<Database["public"]["Tables"]["payroll_months"]["Insert"]>;
