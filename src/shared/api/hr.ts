@@ -133,23 +133,44 @@ export async function setHoursWorked(args: {
 }
 
 /**
+ * How many rows one request may return. PostgREST caps a response server-side
+ * (1000 rows by default), and it does so silently — a truncated read looks
+ * exactly like a short month. So range reads are paged explicitly.
+ */
+const PAGE_SIZE = 1000;
+
+/**
  * Every attendance row between two dates — the whole roster for the payroll
  * view, or one worker for their month sheet.
+ *
+ * A roster-wide month runs to a row per worker per day (95 workers over
+ * August is ~1900 rows), which is past the server's response cap, so the
+ * range is read a page at a time until a short page ends it. Ordering by
+ * date *and* id keeps the paging stable — a date alone leaves rows within
+ * that date in no fixed order, and a page boundary would then drop some and
+ * repeat others.
  */
 export async function fetchAttendanceRange(
   from: string,
   to: string,
   employeeId?: string,
 ): Promise<AttendanceRecord[]> {
-  let query = supabase
-    .from("attendance")
-    .select("*")
-    .gte("work_date", from)
-    .lte("work_date", to);
-  if (employeeId) query = query.eq("employee_id", employeeId);
-  const { data, error } = await query.order("work_date");
-  if (error) throw error;
-  return data;
+  const rows: AttendanceRecord[] = [];
+  for (let page = 0; ; page += 1) {
+    let query = supabase
+      .from("attendance")
+      .select("*")
+      .gte("work_date", from)
+      .lte("work_date", to);
+    if (employeeId) query = query.eq("employee_id", employeeId);
+    const { data, error } = await query
+      .order("work_date")
+      .order("id")
+      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+    if (error) throw error;
+    rows.push(...data);
+    if (data.length < PAGE_SIZE) return rows;
+  }
 }
 
 /**
