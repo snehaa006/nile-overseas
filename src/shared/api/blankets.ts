@@ -1,4 +1,4 @@
-import { supabase } from "@/shared/lib/supabase";
+import { fetchAll, supabase } from "@/shared/lib/supabase";
 import type {
   Blanket,
   BlanketWithRelations,
@@ -10,27 +10,30 @@ const BLANKET_WITH_IMAGES = "*, images:blanket_images(*)";
 
 /** Public catalogue: brands each with their ACTIVE blankets + images. */
 export async function fetchCatalogue(): Promise<BrandWithBlankets[]> {
-  const { data, error } = await supabase
-    .from("products")
-    .select(`*, blankets(${BLANKET_WITH_IMAGES})`)
-    .eq("blankets.is_active", true)
-    .order("name")
-    .order("display_order", { referencedTable: "blankets" });
-  if (error) throw error;
-  return (data ?? []) as unknown as BrandWithBlankets[];
+  const rows = await fetchAll((from, to) =>
+    supabase
+      .from("products")
+      .select(`*, blankets(${BLANKET_WITH_IMAGES})`)
+      .eq("blankets.is_active", true)
+      .order("name")
+      .order("id")
+      .order("display_order", { referencedTable: "blankets" })
+      .range(from, to),
+  );
+  return rows as unknown as BrandWithBlankets[];
 }
 
 /** All blankets for admin (optionally scoped to a brand), newest ordering. */
 export async function fetchBlankets(brandId?: string): Promise<Blanket[]> {
-  let query = supabase
-    .from("blankets")
-    .select("*")
-    .order("display_order")
-    .order("created_at", { ascending: false });
-  if (brandId) query = query.eq("product_id", brandId);
-  const { data, error } = await query;
-  if (error) throw error;
-  return data;
+  return fetchAll((from, to) => {
+    let query = supabase.from("blankets").select("*");
+    if (brandId) query = query.eq("product_id", brandId);
+    return query
+      .order("display_order")
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to);
+  });
 }
 
 /** A single blanket by id OR sku, with brand + images (public detail page). */

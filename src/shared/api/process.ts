@@ -1,4 +1,4 @@
-import { supabase } from "@/shared/lib/supabase";
+import { fetchAll, supabase } from "@/shared/lib/supabase";
 import type { Process } from "@/shared/types/models";
 
 export type ProcessEntryRow = {
@@ -13,13 +13,16 @@ export type ProcessEntryRow = {
 
 /** All process entries for a single day, with blanket name joined in. */
 export async function fetchProcessDay(date: string): Promise<ProcessEntryRow[]> {
-  const { data, error } = await supabase
-    .from("process_entries")
-    .select("id, date, process, blanket_id, roll, kg, blankets(name)")
-    .eq("date", date)
-    .order("created_at");
-  if (error) throw error;
-  return (data ?? []).map((r) => ({
+  const data = await fetchAll((from, to) =>
+    supabase
+      .from("process_entries")
+      .select("id, date, process, blanket_id, roll, kg, blankets(name)")
+      .eq("date", date)
+      .order("created_at")
+      .order("id")
+      .range(from, to),
+  );
+  return data.map((r) => ({
     id: r.id,
     date: r.date,
     process: r.process as Process,
@@ -57,12 +60,16 @@ export type ProcessTotalRow = {
 };
 
 export async function fetchProcessMonthly(): Promise<ProcessTotalRow[]> {
-  const { data, error } = await supabase
-    .from("process_monthly_totals")
-    .select("process, month, roll, kg, entries")
-    .order("month", { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map((r) => ({
+  // The view groups on (process, month), so that pair is its unique key.
+  const data = await fetchAll((from, to) =>
+    supabase
+      .from("process_monthly_totals")
+      .select("process, month, roll, kg, entries")
+      .order("month", { ascending: false })
+      .order("process")
+      .range(from, to),
+  );
+  return data.map((r) => ({
     process: r.process as Process,
     period: r.month as string,
     roll: Number(r.roll ?? 0),
@@ -72,12 +79,15 @@ export async function fetchProcessMonthly(): Promise<ProcessTotalRow[]> {
 }
 
 export async function fetchProcessYearly(): Promise<ProcessTotalRow[]> {
-  const { data, error } = await supabase
-    .from("process_yearly_totals")
-    .select("process, year, roll, kg, entries")
-    .order("year", { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map((r) => ({
+  const data = await fetchAll((from, to) =>
+    supabase
+      .from("process_yearly_totals")
+      .select("process, year, roll, kg, entries")
+      .order("year", { ascending: false })
+      .order("process")
+      .range(from, to),
+  );
+  return data.map((r) => ({
     process: r.process as Process,
     period: r.year as string,
     roll: Number(r.roll ?? 0),

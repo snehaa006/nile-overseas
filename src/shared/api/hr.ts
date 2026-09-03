@@ -1,4 +1,4 @@
-import { supabase } from "@/shared/lib/supabase";
+import { fetchAll, supabase } from "@/shared/lib/supabase";
 import type {
   AttendanceRecord,
   AttendanceStatus,
@@ -12,23 +12,22 @@ import type { TablesInsert, TablesUpdate } from "@/shared/types/database";
 
 /** The departments on the floor, alphabetical. */
 export async function fetchDepartments(): Promise<Department[]> {
-  const { data, error } = await supabase
-    .from("departments")
-    .select("*")
-    .order("name");
-  if (error) throw error;
-  return data;
+  return fetchAll((from, to) =>
+    supabase.from("departments").select("*").order("name").order("id").range(from, to),
+  );
 }
 
 /** Every worker on the roster, active ones first, then alphabetical. */
 export async function fetchEmployees(): Promise<Employee[]> {
-  const { data, error } = await supabase
-    .from("employees")
-    .select("*")
-    .order("is_active", { ascending: false })
-    .order("name");
-  if (error) throw error;
-  return data;
+  return fetchAll((from, to) =>
+    supabase
+      .from("employees")
+      .select("*")
+      .order("is_active", { ascending: false })
+      .order("name")
+      .order("id")
+      .range(from, to),
+  );
 }
 
 export async function fetchEmployee(id: string): Promise<Employee> {
@@ -79,12 +78,14 @@ export async function deleteEmployee(id: string): Promise<void> {
 
 /** Attendance rows for one day — workers with no row yet are simply unmarked. */
 export async function fetchAttendance(date: string): Promise<AttendanceRecord[]> {
-  const { data, error } = await supabase
-    .from("attendance")
-    .select("*")
-    .eq("work_date", date);
-  if (error) throw error;
-  return data;
+  return fetchAll((from, to) =>
+    supabase
+      .from("attendance")
+      .select("*")
+      .eq("work_date", date)
+      .order("id")
+      .range(from, to),
+  );
 }
 
 /**
@@ -135,21 +136,27 @@ export async function setHoursWorked(args: {
 /**
  * Every attendance row between two dates — the whole roster for the payroll
  * view, or one worker for their month sheet.
+ *
+ * A roster-wide month is a row per worker per day (95 workers over August is
+ * ~1900 rows), well past what one response returns, so this pages. Ordering
+ * by date *and* id makes that order total: date alone leaves each day's rows
+ * unordered among themselves, and a page boundary inside a day would then
+ * drop some and repeat others.
  */
 export async function fetchAttendanceRange(
   from: string,
   to: string,
   employeeId?: string,
 ): Promise<AttendanceRecord[]> {
-  let query = supabase
-    .from("attendance")
-    .select("*")
-    .gte("work_date", from)
-    .lte("work_date", to);
-  if (employeeId) query = query.eq("employee_id", employeeId);
-  const { data, error } = await query.order("work_date");
-  if (error) throw error;
-  return data;
+  return fetchAll((rangeFrom, rangeTo) => {
+    let query = supabase
+      .from("attendance")
+      .select("*")
+      .gte("work_date", from)
+      .lte("work_date", to);
+    if (employeeId) query = query.eq("employee_id", employeeId);
+    return query.order("work_date").order("id").range(rangeFrom, rangeTo);
+  });
 }
 
 /**
@@ -195,12 +202,14 @@ export async function savePayrollMonth(
 
 /** Advances drawn by each worker in a month. */
 export async function fetchAdvances(month: string): Promise<SalaryAdvance[]> {
-  const { data, error } = await supabase
-    .from("salary_advances")
-    .select("*")
-    .eq("month", month);
-  if (error) throw error;
-  return data;
+  return fetchAll((from, to) =>
+    supabase
+      .from("salary_advances")
+      .select("*")
+      .eq("month", month)
+      .order("id")
+      .range(from, to),
+  );
 }
 
 /**
@@ -259,12 +268,14 @@ export async function markAttendanceForDates(args: {
 
 /** Salaries already handed over for a month — a row per worker paid. */
 export async function fetchSalaryPayments(month: string): Promise<SalaryPayment[]> {
-  const { data, error } = await supabase
-    .from("salary_payments")
-    .select("*")
-    .eq("month", month);
-  if (error) throw error;
-  return data;
+  return fetchAll((from, to) =>
+    supabase
+      .from("salary_payments")
+      .select("*")
+      .eq("month", month)
+      .order("id")
+      .range(from, to),
+  );
 }
 
 /**

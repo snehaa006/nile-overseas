@@ -1,26 +1,30 @@
-import { supabase } from "@/shared/lib/supabase";
+import { fetchAll, supabase } from "@/shared/lib/supabase";
 import type { Review } from "@/shared/types/models";
 import type { TablesUpdate } from "@/shared/types/database";
 
 /** Approved reviews for the public website, newest first. */
 export async function fetchReviews(): Promise<Review[]> {
-  const { data, error } = await supabase
-    .from("reviews")
-    .select("*")
-    .eq("is_approved", true)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data;
+  return fetchAll((from, to) =>
+    supabase
+      .from("reviews")
+      .select("*")
+      .eq("is_approved", true)
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to),
+  );
 }
 
 /** Every review, including hidden ones — staff panel only (RLS-gated). */
 export async function fetchAllReviews(): Promise<Review[]> {
-  const { data, error } = await supabase
-    .from("reviews")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data;
+  return fetchAll((from, to) =>
+    supabase
+      .from("reviews")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to),
+  );
 }
 
 /** Submit a visitor review from the Contact page; it goes live immediately. */

@@ -1,4 +1,4 @@
-import { supabase } from "@/shared/lib/supabase";
+import { fetchAll, supabase } from "@/shared/lib/supabase";
 import type { StockRow } from "@/shared/types/models";
 import type { Views } from "@/shared/types/database";
 
@@ -15,14 +15,16 @@ export type DayStockLine = {
 };
 
 async function fetchActiveBlanketsWithBrand() {
-  const { data, error } = await supabase
-    .from("blankets")
-    .select("id, name, sku, weight_kg, product_id, display_order, products(name)")
-    .eq("is_active", true)
-    .order("product_id")
-    .order("display_order");
-  if (error) throw error;
-  return data ?? [];
+  return fetchAll((from, to) =>
+    supabase
+      .from("blankets")
+      .select("id, name, sku, weight_kg, product_id, display_order, products(name)")
+      .eq("is_active", true)
+      .order("product_id")
+      .order("display_order")
+      .order("id")
+      .range(from, to),
+  );
 }
 
 /**
@@ -34,21 +36,25 @@ async function fetchActiveBlanketsWithBrand() {
 export async function fetchDayStock(date: string): Promise<DayStockLine[]> {
   const blankets = await fetchActiveBlanketsWithBrand();
 
-  const { data: rows, error: sErr } = await supabase
-    .from("daily_stock")
-    .select("*")
-    .eq("date", date);
-  if (sErr) throw sErr;
-  const byBlanket = new Map((rows ?? []).map((r) => [r.blanket_id, r]));
+  const rows = await fetchAll((from, to) =>
+    supabase.from("daily_stock").select("*").eq("date", date).order("id").range(from, to),
+  );
+  const byBlanket = new Map(rows.map((r) => [r.blanket_id, r]));
 
-  const { data: priorRows, error: pErr } = await supabase
-    .from("daily_stock")
-    .select("blanket_id, date, closing_stock")
-    .lt("date", date)
-    .order("date", { ascending: false });
-  if (pErr) throw pErr;
+  // Every day before this one, newest first — the first row seen for a blanket
+  // is its last recorded closing. That is the whole history, so it grows by a
+  // row per blanket per day and must be paged.
+  const priorRows = await fetchAll((from, to) =>
+    supabase
+      .from("daily_stock")
+      .select("blanket_id, date, closing_stock")
+      .lt("date", date)
+      .order("date", { ascending: false })
+      .order("blanket_id")
+      .range(from, to),
+  );
   const priorClosingByBlanket = new Map<string, number>();
-  for (const r of priorRows ?? []) {
+  for (const r of priorRows) {
     if (!priorClosingByBlanket.has(r.blanket_id)) {
       priorClosingByBlanket.set(r.blanket_id, Number(r.closing_stock ?? 0));
     }
@@ -99,23 +105,29 @@ export async function setDayLock(date: string, locked: boolean): Promise<void> {
 
 /** Distinct dates that already have stock data, newest first. */
 export async function fetchStockDates(): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("daily_stock")
-    .select("date")
-    .order("date", { ascending: false });
-  if (error) throw error;
-  return [...new Set((data ?? []).map((r) => r.date))];
+  const data = await fetchAll((from, to) =>
+    supabase
+      .from("daily_stock")
+      .select("date, id")
+      .order("date", { ascending: false })
+      .order("id")
+      .range(from, to),
+  );
+  return [...new Set(data.map((r) => r.date))];
 }
 
 export async function fetchProductMonthlySummary(): Promise<
   Views<"product_monthly_summary">[]
 > {
-  const { data, error } = await supabase
-    .from("product_monthly_summary")
-    .select("*")
-    .order("month", { ascending: false });
-  if (error) throw error;
-  return data;
+  // The view groups on (product_id, month), so that pair orders it uniquely.
+  return fetchAll((from, to) =>
+    supabase
+      .from("product_monthly_summary")
+      .select("*")
+      .order("month", { ascending: false })
+      .order("product_id")
+      .range(from, to),
+  );
 }
 
 /**
@@ -125,10 +137,15 @@ export async function fetchProductMonthlySummary(): Promise<
  * should still show up in reports.)
  */
 async function fetchBlanketBrandMap() {
-  const { data, error } = await supabase.from("blankets").select("id, name, sku, weight_kg, products(name)");
-  if (error) throw error;
+  const data = await fetchAll((from, to) =>
+    supabase
+      .from("blankets")
+      .select("id, name, sku, weight_kg, products(name)")
+      .order("id")
+      .range(from, to),
+  );
   const map = new Map<string, { name: string; sku: string | null; weight_kg: number; brand_name: string }>();
-  for (const b of data ?? []) {
+  for (const b of data) {
     map.set(b.id, {
       name: b.name,
       sku: b.sku,
@@ -155,16 +172,20 @@ export type BlanketMonthlyRow = {
 
 /** Monthly rollup (sum of production/sales, first/last day's opening/closing) across every blanket. */
 export async function fetchMonthlyRollup(): Promise<BlanketMonthlyRow[]> {
-  const [{ data, error }, blankets] = await Promise.all([
-    supabase
-      .from("blanket_monthly_stock")
-      .select("blanket_id, month, opening_stock, production, sales, closing_stock, days_recorded")
-      .order("month"),
+  // The view groups on (blanket_id, month), so that pair orders it uniquely.
+  const [data, blankets] = await Promise.all([
+    fetchAll((from, to) =>
+      supabase
+        .from("blanket_monthly_stock")
+        .select("blanket_id, month, opening_stock, production, sales, closing_stock, days_recorded")
+        .order("month")
+        .order("blanket_id")
+        .range(from, to),
+    ),
     fetchBlanketBrandMap(),
   ]);
-  if (error) throw error;
 
-  return (data ?? []).map((r) => {
+  return data.map((r) => {
     const b = blankets.get(r.blanket_id!);
     return {
       blanket_id: r.blanket_id!,
@@ -198,16 +219,19 @@ export type BlanketYearlyRow = {
 
 /** Yearly rollup (sum of production/sales, first/last day's opening/closing) across every blanket. */
 export async function fetchYearlyRollup(): Promise<BlanketYearlyRow[]> {
-  const [{ data, error }, blankets] = await Promise.all([
-    supabase
-      .from("blanket_yearly_stock")
-      .select("blanket_id, year, opening_stock, production, sales, closing_stock, days_recorded")
-      .order("year"),
+  const [data, blankets] = await Promise.all([
+    fetchAll((from, to) =>
+      supabase
+        .from("blanket_yearly_stock")
+        .select("blanket_id, year, opening_stock, production, sales, closing_stock, days_recorded")
+        .order("year")
+        .order("blanket_id")
+        .range(from, to),
+    ),
     fetchBlanketBrandMap(),
   ]);
-  if (error) throw error;
 
-  return (data ?? []).map((r) => {
+  return data.map((r) => {
     const b = blankets.get(r.blanket_id!);
     return {
       blanket_id: r.blanket_id!,
@@ -227,9 +251,13 @@ export async function fetchYearlyRollup(): Promise<BlanketYearlyRow[]> {
 
 /** Latest recorded closing stock per active blanket (for "current stock" widgets). */
 export async function fetchLatestStock(): Promise<Map<string, number>> {
-  const { data, error } = await supabase
-    .from("blanket_latest_stock")
-    .select("blanket_id, closing_stock");
-  if (error) throw error;
-  return new Map((data ?? []).map((r) => [r.blanket_id as string, Number(r.closing_stock ?? 0)]));
+  // One row per blanket, so blanket_id alone is a total order.
+  const data = await fetchAll((from, to) =>
+    supabase
+      .from("blanket_latest_stock")
+      .select("blanket_id, closing_stock")
+      .order("blanket_id")
+      .range(from, to),
+  );
+  return new Map(data.map((r) => [r.blanket_id as string, Number(r.closing_stock ?? 0)]));
 }

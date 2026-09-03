@@ -1,14 +1,16 @@
-import { supabase } from "@/shared/lib/supabase";
+import { fetchAll, supabase } from "@/shared/lib/supabase";
 import type { ContactMessage } from "@/shared/types/models";
 
 /** All enquiries, newest first — staff panel only (RLS-gated). */
 export async function fetchContactMessages(): Promise<ContactMessage[]> {
-  const { data, error } = await supabase
-    .from("contact_messages")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data;
+  return fetchAll((from, to) =>
+    supabase
+      .from("contact_messages")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to),
+  );
 }
 
 /**
