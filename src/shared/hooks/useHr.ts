@@ -15,7 +15,6 @@ import {
   markAllAttendance,
   markAttendance,
   markAttendanceForDates,
-  markSalariesPaid,
   markSalaryPaid,
   saveAdvance,
   savePayrollMonth,
@@ -283,17 +282,6 @@ export function useSetSalaryPaid(month: string) {
             amount: args.amount,
           }).then(() => {})
         : unmarkSalaryPaid({ employeeId: args.employeeId, month: `${month}-01` }),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: qk.salaryPayments(month) }),
-  });
-}
-
-/** Marks everyone still outstanding as paid in one go. */
-export function useMarkAllSalariesPaid(month: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (payouts: { employeeId: string; amount: number }[]) =>
-      markSalariesPaid({ month: `${month}-01`, payouts }),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: qk.salaryPayments(month) }),
   });

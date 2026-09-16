@@ -13,7 +13,6 @@ import {
   useDepartments,
   useEmployees,
   useMarkAllAttendance,
-  useMarkAllSalariesPaid,
   useMarkAttendanceForDay,
   usePayrollMonth,
   useSalaryPayments,
@@ -778,7 +777,6 @@ function PayrollTab() {
     usePayrollRows(month);
   const { departments, nameOf } = useDepartmentNames();
   const { data: payments } = useSalaryPayments(month);
-  const markAllPaid = useMarkAllSalariesPaid(month);
 
   const paidById = useMemo(() => {
     const map = new Map<string, SalaryPayment>();
@@ -829,19 +827,6 @@ function PayrollTab() {
     }
   };
 
-  const handleMarkAllPaid = async () => {
-    try {
-      await markAllPaid.mutateAsync(
-        unpaid.map((row) => ({ employeeId: row.employee.id, amount: row.netPay })),
-      );
-      toast.success(
-        `Marked ${unpaid.length} ${unpaid.length === 1 ? "salary" : "salaries"} paid`,
-      );
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to mark salaries paid");
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
@@ -853,24 +838,6 @@ function PayrollTab() {
           departments={departments}
         />
         <div className="ml-auto flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleMarkAllPaid}
-            disabled={markAllPaid.isPending || unpaid.length === 0}
-            title={
-              unpaid.length === 0
-                ? "Everyone is already marked paid for this month"
-                : `Mark ${unpaid.length} outstanding ${unpaid.length === 1 ? "salary" : "salaries"} paid`
-            }
-          >
-            {markAllPaid.isPending ? (
-              <Spinner className="h-4 w-4" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-            Mark all paid
-          </Button>
           <Button
             size="sm"
             onClick={handleExport}

@@ -318,25 +318,6 @@ export async function unmarkSalaryPaid(args: {
   if (error) throw error;
 }
 
-/** Marks a batch of workers paid at once — the "everyone paid" shortcut. */
-export async function markSalariesPaid(args: {
-  month: string;
-  payouts: { employeeId: string; amount: number }[];
-  paidOn?: string;
-}): Promise<void> {
-  if (args.payouts.length === 0) return;
-  const { error } = await supabase.from("salary_payments").upsert(
-    args.payouts.map((payout) => ({
-      employee_id: payout.employeeId,
-      month: args.month,
-      amount: payout.amount,
-      ...(args.paidOn ? { paid_on: args.paidOn } : {}),
-    })),
-    { onConflict: "employee_id,month" },
-  );
-  if (error) throw error;
-}
-
 /** Clears a mark, putting the worker back to "not marked" for that day. */
 export async function clearAttendance(args: {
   employeeId: string;
